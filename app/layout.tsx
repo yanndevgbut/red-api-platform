@@ -32,9 +32,9 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="id" className="dark">
+    <html lang="id" className="dark bg-[#08080a]">
       <body
-        className={`${bebasNeue.variable} ${jetbrainsMono.variable} ${plusJakartaSans.variable} min-h-screen flex flex-col bg-grid bg-ambient-glow selection:bg-red-600 selection:text-white`}
+        className={`${bebasNeue.variable} ${jetbrainsMono.variable} ${plusJakartaSans.variable} min-h-screen flex flex-col bg-[#08080a] text-zinc-100 bg-grid bg-ambient-glow selection:bg-red-600 selection:text-white`}
       >
         {children}
       </body>
