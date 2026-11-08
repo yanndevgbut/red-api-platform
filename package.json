@@ -6,7 +6,9 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "test:security": "node --test tests/security.test.mjs",
+    "test:browser": "node tests/panels.browser.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.49.1",
@@ -18,9 +20,11 @@
     "tailwind-merge": "^3.0.1"
   },
   "devDependencies": {
+    "@electric-sql/pglite": "^0.5.15",
     "@types/node": "^22.13.4",
     "@types/react": "^19.0.10",
     "@types/react-dom": "^19.0.4",
+    "playwright": "^1.65.0",
     "postcss": "^8.5.32",
     "tailwindcss": "^3.4.17",
     "typescript": "^5.7.3"

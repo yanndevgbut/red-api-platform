@@ -10,31 +10,46 @@ export default function AuthCallbackPage() {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   useEffect(() => {
-    async function handleAuth() {
-      try {
-        const { data, error } = await getSupabase().auth.getSession();
+    let disposed = false;
+    let unsubscribe = () => {};
+    const timeout = setTimeout(() => {
+      if (!disposed) setErrorMsg("Sesi login belum diterima. Silakan kembali dan coba login lagi.");
+    }, 15000);
+    const finish = () => {
+      if (disposed) return;
+      clearTimeout(timeout);
+      router.replace("/?tab=profile");
+    };
+    try {
+      const query = new URLSearchParams(window.location.search);
+      const hash = new URLSearchParams(window.location.hash.slice(1));
+      if (query.has("error") || hash.has("error")) throw new Error("Login Google dibatalkan atau gagal. Silakan coba lagi.");
+      const client = getSupabase();
+      const { data } = client.auth.onAuthStateChange((_event, session) => {
+        if (session) finish();
+      });
+      unsubscribe = () => data.subscription.unsubscribe();
+      void client.auth.getSession().then(({ data, error }) => {
+        if (disposed) return;
         if (error) {
-          setErrorMsg(error.message);
-          return;
+          clearTimeout(timeout);
+          setErrorMsg("Sesi login tidak valid. Silakan coba lagi.");
+        } else if (data.session) finish();
+      }).catch(() => {
+        if (!disposed) {
+          clearTimeout(timeout);
+          setErrorMsg("Gagal memproses autentikasi Google.");
         }
-
-        if (data?.session) {
-          router.replace("/?tab=docs");
-        } else {
-          // Listen to auth state change if session is being processed from hash
-          const { data: authListener } = getSupabase().auth.onAuthStateChange((event, session) => {
-            if (session) {
-              authListener.subscription.unsubscribe();
-              router.replace("/?tab=docs");
-            }
-          });
-        }
-      } catch (err: any) {
-        setErrorMsg(err.message || "Gagal memproses autentikasi Google");
-      }
+      });
+    } catch (error) {
+      clearTimeout(timeout);
+      setErrorMsg(error instanceof Error ? error.message : "Gagal memproses autentikasi Google.");
     }
-
-    handleAuth();
+    return () => {
+      disposed = true;
+      clearTimeout(timeout);
+      unsubscribe();
+    };
   }, [router]);
 
   return (

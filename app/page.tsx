@@ -53,7 +53,7 @@ export default function Home() {
       try {
         const res = await fetch("/api/user", {
           headers: { Authorization: `Bearer ${accessToken}` },
-          signal: controller.signal,
+          signal: AbortSignal.any([controller.signal, AbortSignal.timeout(10000)]),
           cache: "no-store",
         });
         if (!res.ok) throw new Error();

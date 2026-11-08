@@ -25,7 +25,7 @@ export default function DocsAccordion({ defaultKey }: { defaultKey?: string }) {
     const controller = new AbortController();
     async function loadEndpoints() {
       try {
-        const res = await fetch("/api/endpoints", { signal: controller.signal });
+        const res = await fetch("/api/endpoints", { signal: AbortSignal.any([controller.signal, AbortSignal.timeout(10000)]) });
         if (!res.ok) throw new Error();
         const list: Endpoint[] = await res.json();
         setEndpoints(list);

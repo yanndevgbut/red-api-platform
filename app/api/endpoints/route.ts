@@ -8,6 +8,7 @@ export async function GET() {
   try {
     const { url, key } = getSupabasePublicConfig();
     const supabase = createClient(url, key, {
+      global: { fetch: (input, init) => fetch(input, { ...init, signal: AbortSignal.timeout(8000) }) },
       auth: { persistSession: false, autoRefreshToken: false },
     });
     const { data, error } = await supabase.from("endpoints")

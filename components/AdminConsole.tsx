@@ -1,7 +1,8 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useState } from "react";
 import { getSupabase } from "@/lib/supabase";
+import { usePollingResource } from "@/lib/use-polling-resource";
 import { isFeaturePath } from "@/lib/api";
 import { Endpoint, Profile } from "@/types";
 import { Shield, Plus, Trash2, Power, RefreshCw, AlertTriangle } from "lucide-react";
@@ -12,7 +13,6 @@ export default function AdminConsole() {
   const [users, setUsers] = useState<Profile[]>([]);
   const [logs, setLogs] = useState<any[]>([]);
   const [maintenance, setMaintenance] = useState(false);
-  const [loading, setLoading] = useState(false);
 
   // New endpoint form state
   const [newEp, setNewEp] = useState({
@@ -24,36 +24,27 @@ export default function AdminConsole() {
     description: "",
   });
 
-  const loadData = async () => {
-    setLoading(true);
-    // Load endpoints
-    const { data: epData } = await getSupabase().from("endpoints").select("*").order("id", { ascending: true });
-    if (epData) setEndpoints(epData as Endpoint[]);
-
-    // Load users
-    const { data: uData } = await getSupabase().from("profiles").select("*").order("created_at", { ascending: false });
-    if (uData) setUsers(uData as Profile[]);
-
-    // Load logs
-    const { data: logData } = await getSupabase()
-      .from("api_logs")
-      .select("*")
-      .order("id", { ascending: false })
-      .limit(25);
-    if (logData) setLogs(logData);
-
-    // Load settings
-    const { data: sett } = await getSupabase().from("system_settings").select("*").eq("id", 1).single();
-    if (sett) setMaintenance(Boolean(sett.maintenance_mode));
-
-    setLoading(false);
-  };
-
-  useEffect(() => {
-    loadData();
-    const interval = setInterval(loadData, 8000);
-    return () => clearInterval(interval);
+  const fetchData = useCallback(async (signal: AbortSignal) => {
+    const client = getSupabase();
+    const results = await Promise.all([
+      client.from("endpoints").select("*").order("id").abortSignal(signal),
+      client.from("profiles").select("*").order("created_at", { ascending: false }).limit(200).abortSignal(signal),
+      client.from("api_logs").select("*").order("id", { ascending: false }).limit(25).abortSignal(signal),
+      client.from("system_settings").select("*").eq("id", 1).abortSignal(signal).single(),
+    ]);
+    if (results.some(result => result.error)) throw new Error("Admin data unavailable");
+    return { endpoints: results[0].data as Endpoint[], users: results[1].data as Profile[], logs: results[2].data ?? [], maintenance: Boolean(results[3].data?.maintenance_mode) };
   }, []);
+  const { data, error, loading, refreshing, reload: loadData } = usePollingResource(fetchData, 8000);
+
+  // Preserve the last successful snapshot if a later refresh fails.
+  React.useEffect(() => {
+    if (!data) return;
+    setEndpoints(data.endpoints);
+    setUsers(data.users);
+    setLogs(data.logs);
+    setMaintenance(data.maintenance);
+  }, [data]);
 
   const toggleMaintenance = async () => {
     const nextState = !maintenance;
@@ -175,6 +166,7 @@ export default function AdminConsole() {
           </div>
           <button
             onClick={toggleMaintenance}
+            disabled={!data}
             className={`px-3 py-1 rounded text-xs font-mono-code transition-colors flex items-center gap-1 ${
               maintenance
                 ? "bg-red-600 hover:bg-red-500 text-black font-bold"
@@ -185,6 +177,13 @@ export default function AdminConsole() {
             TOGGLE
           </button>
         </div>
+      </div>
+
+      <div role="status" className="flex flex-wrap items-center justify-between gap-3 text-xs font-mono-code text-zinc-400">
+        <span>{loading ? "Memuat data panel..." : error || (refreshing ? "Memperbarui data..." : "Data panel tersinkronisasi. Pengguna: maksimal 200 akun terbaru.")}</span>
+        <button type="button" onClick={loadData} disabled={refreshing} className="inline-flex items-center gap-2 rounded border border-surface-border px-3 py-2 disabled:opacity-50">
+          <RefreshCw className={`h-3 w-3 ${refreshing ? "animate-spin" : ""}`} /> Coba lagi / Refresh
+        </button>
       </div>
 
       {/* Subtabs */}

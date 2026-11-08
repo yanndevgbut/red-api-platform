@@ -13,7 +13,10 @@ export async function GET(req: NextRequest) {
   try {
     const { url, key } = getSupabasePublicConfig();
     const supabase = createClient(url, key, {
-      global: { headers: { Authorization: `Bearer ${token}` } },
+      global: {
+        headers: { Authorization: `Bearer ${token}` },
+        fetch: (input, init) => fetch(input, { ...init, signal: AbortSignal.timeout(8000) }),
+      },
       auth: { persistSession: false, autoRefreshToken: false },
     });
     const { data: { user }, error } = await supabase.auth.getUser(token);

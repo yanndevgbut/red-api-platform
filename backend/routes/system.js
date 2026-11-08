@@ -32,9 +32,9 @@ router.get('/stats', (req, res) => {
   // CPU Load
   const cpus = os.cpus();
   const loadAvg = os.loadavg();
-  const cpuPercent = Math.min(100, Math.round((loadAvg[0] / (cpus.length || 1)) * 100)) || 15;
+  const cpuPercent = Math.min(100, Math.round((loadAvg[0] / (cpus.length || 1)) * 100));
 
-  const uptimeSec = Math.floor(os.uptime());
+  const uptimeSec = Math.floor(process.uptime());
   const days = Math.floor(uptimeSec / 86400);
   const hours = Math.floor((uptimeSec % 86400) / 3600);
   const mins = Math.floor((uptimeSec % 3600) / 60);
@@ -43,7 +43,7 @@ router.get('/stats', (req, res) => {
     status: true,
     creator: 'RED/API Engine',
     data: {
-      node: 'ptero-node-sg-01',
+      node: process.env.NODE_NAME || 'RED/API',
       platform: os.platform() + ' ' + os.arch(),
       node_version: process.version,
       cpu: {
