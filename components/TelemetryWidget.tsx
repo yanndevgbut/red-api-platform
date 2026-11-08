@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import { TelemetryData } from "@/types";
+import { getApiBaseUrl } from "@/lib/api";
 
 export default function TelemetryWidget() {
   const [telemetry, setTelemetry] = useState<TelemetryData | null>(null);
@@ -10,8 +11,8 @@ export default function TelemetryWidget() {
   useEffect(() => {
     async function fetchStats() {
       try {
-        const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || "http://103.155.224.102:3016";
-        const res = await fetch(`${baseUrl}/api/system/stats`, { signal: AbortSignal.timeout(4000) });
+        const baseUrl = getApiBaseUrl();
+        const res = await fetch(`${baseUrl}/api/system/stats`, { signal: AbortSignal.timeout(6000) });
         if (res.ok) {
           const json = await res.json();
           if (json.status && json.data) {

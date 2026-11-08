@@ -4,6 +4,7 @@ import React, { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { Endpoint } from "@/types";
 import { ChevronDown, Copy, Check, Loader2, Play } from "lucide-react";
+import { getApiBaseUrl } from "@/lib/api";
 
 export default function DocsAccordion() {
   const [endpoints, setEndpoints] = useState<Endpoint[]>([]);
@@ -63,7 +64,7 @@ export default function DocsAccordion() {
   };
 
   const executeRequest = async (ep: Endpoint) => {
-    const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || "http://103.155.224.102:3016";
+    const baseUrl = getApiBaseUrl();
     const apiKey = apiKeys[ep.id] || "red_live_testdemo12345";
 
     setLoadingReq((prev) => ({ ...prev, [ep.id]: true }));

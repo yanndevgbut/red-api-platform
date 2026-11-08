@@ -21,7 +21,11 @@ export default function AuthModal({ isOpen, onClose, reason }: AuthModalProps) {
     setError(null);
 
     try {
-      const redirectTo = `${window.location.origin}/auth/callback`;
+      const origin = typeof window !== "undefined" && window.location.origin
+        ? window.location.origin
+        : (process.env.NEXT_PUBLIC_SITE_URL || "https://red-api-platform.vercel.app");
+      const redirectTo = `${origin}/auth/callback`;
+
       const { error } = await supabase.auth.signInWithOAuth({
         provider: "google",
         options: {

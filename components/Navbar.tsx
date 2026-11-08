@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from "react";
 import { Terminal, Shield, Menu, Lock, LogIn, LogOut, User } from "lucide-react";
 import { Profile } from "@/types";
+import { getApiBaseUrl } from "@/lib/api";
 
 interface NavbarProps {
   activeTab: string;
@@ -27,8 +28,8 @@ export default function Navbar({
     async function checkPing() {
       const start = Date.now();
       try {
-        const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || "http://103.155.224.102:3016";
-        const res = await fetch(`${baseUrl}/health`, { signal: AbortSignal.timeout(3000) });
+        const baseUrl = getApiBaseUrl();
+        const res = await fetch(`${baseUrl}/health`, { signal: AbortSignal.timeout(5000) });
         if (res.ok) {
           setPing(Date.now() - start);
         } else {
