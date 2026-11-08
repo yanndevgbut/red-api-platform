@@ -10,8 +10,9 @@ import DocsAccordion from "@/components/DocsAccordion";
 import PricingTiers from "@/components/PricingTiers";
 import UserDashboard from "@/components/UserDashboard";
 import AdminConsole from "@/components/AdminConsole";
+import AuthModal from "@/components/AuthModal";
 import { Profile, ApiKey } from "@/types";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, Lock, LogIn } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 
 export default function Home() {
@@ -19,19 +20,38 @@ export default function Home() {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [user, setUser] = useState<Profile | null>(null);
   const [apiKey, setApiKey] = useState<ApiKey | null>(null);
+  const [authModalOpen, setAuthModalOpen] = useState(false);
+  const [authReason, setAuthReason] = useState<string>("");
+  const [isAuthChecking, setIsAuthChecking] = useState(true);
 
   // Load active user profile & API key
   const loadUserData = async () => {
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (session && session.user) {
-        // Load profile
+        // Load profile from Supabase
         const { data: prof } = await supabase
           .from("profiles")
           .select("*")
           .eq("id", session.user.id)
-          .single();
-        if (prof) setUser(prof as Profile);
+          .maybeSingle();
+
+        if (prof) {
+          setUser(prof as Profile);
+        } else {
+          // If trigger takes a moment or profile not synced yet, fallback to session metadata
+          setUser({
+            id: session.user.id,
+            username: session.user.user_metadata?.name || session.user.email?.split("@")[0] || "user",
+            email: session.user.email || "",
+            role: "user",
+            plan: "free",
+            limit_daily: 100,
+            limit_remaining: 100,
+            banned: false,
+            created_at: new Date().toISOString(),
+          });
+        }
 
         // Load key
         const { data: k } = await supabase
@@ -39,17 +59,71 @@ export default function Home() {
           .select("*")
           .eq("user_id", session.user.id)
           .eq("is_active", true)
-          .single();
+          .maybeSingle();
+
         if (k) setApiKey(k as ApiKey);
+      } else {
+        setUser(null);
+        setApiKey(null);
       }
     } catch (err) {
       console.error("Error loading auth session:", err);
+    } finally {
+      setIsAuthChecking(false);
     }
   };
 
   useEffect(() => {
     loadUserData();
+
+    // Listen to real-time auth state changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (session) {
+        await loadUserData();
+      } else {
+        setUser(null);
+        setApiKey(null);
+      }
+    });
+
+    // Handle URL search params on client (e.g. ?tab=docs after oauth redirect)
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const tabParam = params.get("tab");
+      if (tabParam) {
+        setActiveTab(tabParam);
+      }
+    }
+
+    return () => {
+      subscription.unsubscribe();
+    };
   }, []);
+
+  const handleTabSelect = (tabId: string) => {
+    const protectedTabs = ["docs", "profile", "admin"];
+    if (protectedTabs.includes(tabId) && !user) {
+      const reasons: Record<string, string> = {
+        docs: "Halaman dokumentasi & playground interaktif memerlukan login Google untuk menggunakan API Key.",
+        profile: "Halaman manajemen profil & API Key membutuhkan autentikasi akun Google.",
+        admin: "Halaman admin console hanya dapat diakses setelah login dengan akun admin yang terverifikasi.",
+      };
+      setAuthReason(reasons[tabId] || "Silakan login dengan Google untuk mengakses halaman ini.");
+      setAuthModalOpen(true);
+      return;
+    }
+
+    setActiveTab(tabId);
+  };
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    setUser(null);
+    setApiKey(null);
+    if (["docs", "profile", "admin"].includes(activeTab)) {
+      setActiveTab("landing");
+    }
+  };
 
   return (
     <>
@@ -59,23 +133,40 @@ export default function Home() {
       {/* Navigation Header */}
       <Navbar
         activeTab={activeTab}
-        setActiveTab={setActiveTab}
+        setActiveTab={handleTabSelect}
         openDrawer={() => setDrawerOpen(true)}
         user={user}
+        onLoginClick={() => {
+          setAuthReason("Masuk dengan Google untuk membuka akses seluruh fitur platform.");
+          setAuthModalOpen(true);
+        }}
+        onLogoutClick={handleLogout}
       />
 
       {/* Right Slide-over Navigation Drawer */}
       <Drawer
         isOpen={drawerOpen}
         onClose={() => setDrawerOpen(false)}
-        setActiveTab={setActiveTab}
+        setActiveTab={handleTabSelect}
         user={user}
+        onLoginClick={() => {
+          setAuthReason("Masuk dengan Google untuk membuka akses seluruh fitur platform.");
+          setAuthModalOpen(true);
+        }}
+        onLogoutClick={handleLogout}
+      />
+
+      {/* Google Sign-in Modal */}
+      <AuthModal
+        isOpen={authModalOpen}
+        onClose={() => setAuthModalOpen(false)}
+        reason={authReason}
       />
 
       {/* Main Container */}
       <main className="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6">
         
-        {/* VIEW 1: LANDING / OVERVIEW */}
+        {/* VIEW 1: LANDING / OVERVIEW (Public) */}
         {activeTab === "landing" && (
           <section className="space-y-12 animate-fade-in">
             {/* Hero Section */}
@@ -94,7 +185,7 @@ export default function Home() {
 
                   <div className="flex flex-wrap items-center gap-4 pt-2">
                     <button
-                      onClick={() => setActiveTab("docs")}
+                      onClick={() => handleTabSelect("docs")}
                       className="px-6 py-3 bg-red-600 hover:bg-red-500 text-black font-bebas text-2xl tracking-wider uppercase transition-all active:scale-95 shadow-[0_0_20px_rgba(220,38,38,0.3)] hover:shadow-[0_0_30px_rgba(220,38,38,0.6)] flex items-center gap-2"
                     >
                       EXPLORE ENDPOINTS
@@ -102,7 +193,7 @@ export default function Home() {
                     </button>
 
                     <button
-                      onClick={() => setActiveTab("pricing")}
+                      onClick={() => handleTabSelect("pricing")}
                       className="px-6 py-3 border border-surface-border hover:border-red-600 text-white font-bebas text-2xl tracking-wider uppercase transition-colors"
                     >
                       UPGRADE TO VIP
@@ -122,31 +213,103 @@ export default function Home() {
           </section>
         )}
 
-        {/* VIEW 2: DOCS & ACCORDION INLINE TESTER */}
+        {/* VIEW 2: DOCS & ACCORDION INLINE TESTER (Protected) */}
         {activeTab === "docs" && (
           <section className="animate-fade-in">
-            <DocsAccordion />
+            {!user ? (
+              <div className="p-12 text-center bg-surface-panel border-2 border-red-900/60 rounded-xl space-y-4 max-w-xl mx-auto shadow-2xl">
+                <div className="w-12 h-12 bg-red-950/80 border border-red-800 rounded-full flex items-center justify-center mx-auto text-red-500">
+                  <Lock className="w-6 h-6" />
+                </div>
+                <h3 className="font-bebas text-4xl text-white tracking-wide">
+                  DOKUMENTASI & TESTER TERKUNCI
+                </h3>
+                <p className="text-xs font-mono-code text-zinc-400 max-w-md mx-auto leading-relaxed">
+                  Untuk menguji endpoint dan mendapatkan API Key produksi, silakan login menggunakan akun Google Anda terlebih dahulu.
+                </p>
+                <button
+                  onClick={() => {
+                    setAuthReason("Login Google untuk mengakses dokumentasi & live tester.");
+                    setAuthModalOpen(true);
+                  }}
+                  className="px-6 py-2.5 bg-red-600 hover:bg-red-500 text-black font-bold font-mono-code text-xs rounded uppercase inline-flex items-center gap-2 shadow-[0_0_20px_rgba(220,38,38,0.4)]"
+                >
+                  <LogIn className="w-4 h-4" />
+                  MASUK DENGAN GOOGLE
+                </button>
+              </div>
+            ) : (
+              <DocsAccordion />
+            )}
           </section>
         )}
 
-        {/* VIEW 3: PRICING */}
+        {/* VIEW 3: PRICING (Public) */}
         {activeTab === "pricing" && (
           <section className="animate-fade-in">
             <PricingTiers />
           </section>
         )}
 
-        {/* VIEW 4: PROFILE & API KEY */}
+        {/* VIEW 4: PROFILE & API KEY (Protected) */}
         {activeTab === "profile" && (
           <section className="animate-fade-in">
-            <UserDashboard user={user} apiKey={apiKey} onRefresh={loadUserData} />
+            {!user ? (
+              <div className="p-12 text-center bg-surface-panel border-2 border-red-900/60 rounded-xl space-y-4 max-w-xl mx-auto shadow-2xl">
+                <div className="w-12 h-12 bg-red-950/80 border border-red-800 rounded-full flex items-center justify-center mx-auto text-red-500">
+                  <Lock className="w-6 h-6" />
+                </div>
+                <h3 className="font-bebas text-4xl text-white tracking-wide">
+                  PROFILE & API KEY TERKUNCI
+                </h3>
+                <p className="text-xs font-mono-code text-zinc-400 max-w-md mx-auto leading-relaxed">
+                  Login akun Google untuk melihat profil, kuota harian, serta kunci API produksi milik Anda.
+                </p>
+                <button
+                  onClick={() => {
+                    setAuthReason("Login Google untuk mengakses profile & kredensial API key Anda.");
+                    setAuthModalOpen(true);
+                  }}
+                  className="px-6 py-2.5 bg-red-600 hover:bg-red-500 text-black font-bold font-mono-code text-xs rounded uppercase inline-flex items-center gap-2 shadow-[0_0_20px_rgba(220,38,38,0.4)]"
+                >
+                  <LogIn className="w-4 h-4" />
+                  MASUK DENGAN GOOGLE
+                </button>
+              </div>
+            ) : (
+              <UserDashboard user={user} apiKey={apiKey} onRefresh={loadUserData} />
+            )}
           </section>
         )}
 
-        {/* VIEW 5: ADMIN CONSOLE */}
+        {/* VIEW 5: ADMIN CONSOLE (Protected) */}
         {activeTab === "admin" && (
           <section className="animate-fade-in">
-            <AdminConsole />
+            {!user ? (
+              <div className="p-12 text-center bg-surface-panel border-2 border-red-900/60 rounded-xl space-y-4 max-w-xl mx-auto shadow-2xl">
+                <div className="w-12 h-12 bg-red-950/80 border border-red-800 rounded-full flex items-center justify-center mx-auto text-red-500">
+                  <Lock className="w-6 h-6" />
+                </div>
+                <h3 className="font-bebas text-4xl text-white tracking-wide">
+                  ADMIN CONSOLE TERKUNCI
+                </h3>
+                <p className="text-xs font-mono-code text-zinc-400 max-w-md mx-auto leading-relaxed">
+                  Otentikasi administrator dibutuhkan untuk mengakses manajemen endpoint dan server settings.
+                </p>
+                <button
+                  onClick={() => {
+                    setAuthReason("Login dengan akun Google Admin terverifikasi.");
+                    setAuthModalOpen(true);
+                  }}
+                  className="px-6 py-2.5 bg-red-600 hover:bg-red-500 text-black font-bold font-mono-code text-xs rounded uppercase inline-flex items-center gap-2 shadow-[0_0_20px_rgba(220,38,38,0.4)]"
+                >
+                  <LogIn className="w-4 h-4" />
+                  MASUK DENGAN GOOGLE
+                </button>
+              </div>
+            ) : (
+              <AdminConsole />
+            )}
           </section>
         )}
 

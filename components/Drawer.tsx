@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { X, ArrowRight, Server, Shield, Database } from "lucide-react";
+import { X, ArrowRight, Server, Shield, Database, Lock, LogIn, LogOut } from "lucide-react";
 import { Profile } from "@/types";
 
 interface DrawerProps {
@@ -9,13 +9,29 @@ interface DrawerProps {
   onClose: () => void;
   setActiveTab: (tab: string) => void;
   user: Profile | null;
+  onLoginClick: () => void;
+  onLogoutClick: () => void;
 }
 
-export default function Drawer({ isOpen, onClose, setActiveTab, user }: DrawerProps) {
+export default function Drawer({
+  isOpen,
+  onClose,
+  setActiveTab,
+  user,
+  onLoginClick,
+  onLogoutClick,
+}: DrawerProps) {
   const handleNav = (tabId: string) => {
     setActiveTab(tabId);
     onClose();
   };
+
+  const navItems = [
+    { id: "landing", label: "01. OVERVIEW & TELEMETRY", protected: false },
+    { id: "docs", label: "02. DOCS & TESTER (INLINE)", protected: true },
+    { id: "pricing", label: "03. PRICING TIERS", protected: false },
+    { id: "profile", label: "04. PROFILE & API KEYS", protected: true },
+  ];
 
   return (
     <>
@@ -48,53 +64,96 @@ export default function Drawer({ isOpen, onClose, setActiveTab, user }: DrawerPr
         </div>
 
         {/* Navigation Items */}
-        <div className="p-5 flex-1 overflow-y-auto space-y-3 font-mono-code text-xs">
-          {/* User Snapshot */}
-          <div className="bg-surface-card border border-surface-border p-3.5 rounded mb-4 space-y-1.5">
-            <div className="flex justify-between items-center">
-              <span className="text-zinc-400">ACTIVE ACCOUNT:</span>
-              <span className="px-1.5 py-0.2 bg-red-950 border border-red-800 text-red-300 text-[10px] rounded font-bold">
-                {user ? `${user.plan.toUpperCase()} TIER` : "VIP TIER"}
-              </span>
+        <div className="p-5 flex-1 overflow-y-auto space-y-4 font-mono-code text-xs">
+          
+          {/* User Status Card */}
+          {user ? (
+            <div className="bg-surface-card border border-surface-border p-3.5 rounded space-y-2">
+              <div className="flex justify-between items-center">
+                <span className="text-zinc-400">ACTIVE ACCOUNT:</span>
+                <span className="px-1.5 py-0.2 bg-red-950 border border-red-800 text-red-300 text-[10px] rounded font-bold uppercase">
+                  {user.plan} TIER
+                </span>
+              </div>
+              <div className="text-sm font-bold text-white truncate">
+                {user.username}
+              </div>
+              <div className="text-[11px] text-zinc-400 truncate">
+                {user.email}
+              </div>
+              <div className="text-[10px] text-zinc-500 pt-1 border-t border-surface-border">
+                Quota: {user.limit_remaining.toLocaleString()} / {user.limit_daily.toLocaleString()} requests
+              </div>
+              <button
+                onClick={() => {
+                  onClose();
+                  onLogoutClick();
+                }}
+                className="w-full mt-2 py-1.5 px-3 bg-red-950/40 hover:bg-red-950 border border-red-800 text-red-300 rounded text-[11px] flex items-center justify-center gap-1.5 transition-colors"
+              >
+                <LogOut className="w-3.5 h-3.5" />
+                KELUAR DARI AKUN
+              </button>
             </div>
-            <div className="text-sm font-bold text-white truncate">
-              {user ? `${user.username} (${user.email})` : "demo_user (user@redapi.dev)"}
+          ) : (
+            <div className="bg-surface-card border border-red-900/40 p-3.5 rounded space-y-2.5">
+              <div className="flex items-center gap-1.5 text-red-400 font-bold text-[11px]">
+                <Lock className="w-3.5 h-3.5" />
+                STATUS: BELUM LOGIN
+              </div>
+              <p className="text-[11px] text-zinc-400 leading-relaxed">
+                Login akun Google untuk membuka akses Docs, Playground Tester, dan generate API Key.
+              </p>
+              <button
+                onClick={() => {
+                  onClose();
+                  onLoginClick();
+                }}
+                className="w-full py-2 px-3 bg-red-600 hover:bg-red-500 text-black font-bold rounded text-xs flex items-center justify-center gap-2 transition-transform active:scale-95"
+              >
+                <LogIn className="w-4 h-4" />
+                MASUK DENGAN GOOGLE
+              </button>
             </div>
-            <div className="text-[10px] text-zinc-500">
-              Remaining Quota: {user ? user.limit_remaining.toLocaleString() : "14,998"} requests
-            </div>
-          </div>
+          )}
 
-          <div className="text-[10px] uppercase tracking-widest text-zinc-500 font-bold px-1">
+          <div className="text-[10px] uppercase tracking-widest text-zinc-500 font-bold px-1 pt-2">
             PAGES & VIEWS
           </div>
 
-          {[
-            { id: "landing", label: "01. OVERVIEW & TELEMETRY" },
-            { id: "docs", label: "02. DOCS & TESTER (INLINE)" },
-            { id: "pricing", label: "03. PRICING TIERS" },
-            { id: "profile", label: "04. PROFILE & API KEYS" },
-          ].map((item) => (
-            <button
-              key={item.id}
-              onClick={() => handleNav(item.id)}
-              className="w-full text-left py-2.5 px-3 rounded bg-surface-card/40 hover:bg-surface-card border border-transparent hover:border-surface-border flex items-center justify-between group transition-all"
-            >
-              <span className="text-zinc-200 group-hover:text-white">{item.label}</span>
-              <ArrowRight className="w-3.5 h-3.5 text-zinc-600 group-hover:text-red-500 group-hover:translate-x-0.5 transition-transform" />
-            </button>
-          ))}
+          <div className="space-y-2">
+            {navItems.map((item) => {
+              const isLocked = item.protected && !user;
+              return (
+                <button
+                  key={item.id}
+                  onClick={() => handleNav(item.id)}
+                  className="w-full text-left py-2.5 px-3 rounded bg-surface-card/40 hover:bg-surface-card border border-transparent hover:border-surface-border flex items-center justify-between group transition-all"
+                >
+                  <span className="text-zinc-200 group-hover:text-white flex items-center gap-2">
+                    {isLocked && <Lock className="w-3.5 h-3.5 text-red-500 flex-shrink-0" />}
+                    {item.label}
+                  </span>
+                  <ArrowRight className="w-3.5 h-3.5 text-zinc-600 group-hover:text-red-500 group-hover:translate-x-0.5 transition-transform" />
+                </button>
+              );
+            })}
 
-          <button
-            onClick={() => handleNav("admin")}
-            className="w-full text-left py-2.5 px-3 rounded bg-red-950/30 hover:bg-red-950/60 border border-red-900/60 flex items-center justify-between group transition-all"
-          >
-            <span className="text-red-300 font-bold flex items-center gap-1.5">
-              <Shield className="w-3.5 h-3.5" />
-              05. MASTER ADMIN CONSOLE
-            </span>
-            <ArrowRight className="w-3.5 h-3.5 text-red-400 group-hover:translate-x-0.5 transition-transform" />
-          </button>
+            <button
+              onClick={() => handleNav("admin")}
+              className="w-full text-left py-2.5 px-3 rounded bg-red-950/30 hover:bg-red-950/60 border border-red-900/60 flex items-center justify-between group transition-all"
+            >
+              <span className="text-red-300 font-bold flex items-center gap-2">
+                {!user ? (
+                  <Lock className="w-3.5 h-3.5 text-red-500" />
+                ) : (
+                  <Shield className="w-3.5 h-3.5" />
+                )}
+                05. MASTER ADMIN CONSOLE
+              </span>
+              <ArrowRight className="w-3.5 h-3.5 text-red-400 group-hover:translate-x-0.5 transition-transform" />
+            </button>
+          </div>
 
           {/* Quick Info */}
           <div className="pt-4 border-t border-surface-border space-y-2 text-[11px] text-zinc-400">

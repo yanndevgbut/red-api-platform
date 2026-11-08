@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { Terminal, Shield, Menu } from "lucide-react";
+import { Terminal, Shield, Menu, Lock, LogIn, LogOut, User } from "lucide-react";
 import { Profile } from "@/types";
 
 interface NavbarProps {
@@ -9,9 +9,18 @@ interface NavbarProps {
   setActiveTab: (tab: string) => void;
   openDrawer: () => void;
   user: Profile | null;
+  onLoginClick: () => void;
+  onLogoutClick: () => void;
 }
 
-export default function Navbar({ activeTab, setActiveTab, openDrawer, user }: NavbarProps) {
+export default function Navbar({
+  activeTab,
+  setActiveTab,
+  openDrawer,
+  user,
+  onLoginClick,
+  onLogoutClick,
+}: NavbarProps) {
   const [ping, setPing] = useState<number | null>(null);
 
   useEffect(() => {
@@ -34,6 +43,13 @@ export default function Navbar({ activeTab, setActiveTab, openDrawer, user }: Na
     const interval = setInterval(checkPing, 10000);
     return () => clearInterval(interval);
   }, []);
+
+  const navItems = [
+    { id: "landing", label: "OVERVIEW", protected: false },
+    { id: "docs", label: "DOCS & TESTER", protected: true },
+    { id: "pricing", label: "PRICING", protected: false },
+    { id: "profile", label: "PROFILE & KEY", protected: true },
+  ];
 
   return (
     <header className="border-b border-surface-border bg-surface/90 backdrop-blur sticky top-0 z-40">
@@ -65,24 +81,23 @@ export default function Navbar({ activeTab, setActiveTab, openDrawer, user }: Na
 
         {/* Desktop Nav */}
         <nav className="hidden lg:flex items-center gap-1 text-xs font-mono-code tracking-wider uppercase">
-          {[
-            { id: "landing", label: "OVERVIEW" },
-            { id: "docs", label: "DOCS & TESTER" },
-            { id: "pricing", label: "PRICING" },
-            { id: "profile", label: "PROFILE & KEY" },
-          ].map((item) => (
-            <button
-              key={item.id}
-              onClick={() => setActiveTab(item.id)}
-              className={`px-3 py-1.5 rounded transition-all ${
-                activeTab === item.id
-                  ? "bg-surface-panel text-white border border-surface-border"
-                  : "text-zinc-300 hover:text-white hover:bg-surface-panel"
-              }`}
-            >
-              {item.label}
-            </button>
-          ))}
+          {navItems.map((item) => {
+            const isLocked = item.protected && !user;
+            return (
+              <button
+                key={item.id}
+                onClick={() => setActiveTab(item.id)}
+                className={`px-3 py-1.5 rounded transition-all flex items-center gap-1.5 ${
+                  activeTab === item.id
+                    ? "bg-surface-panel text-white border border-surface-border"
+                    : "text-zinc-300 hover:text-white hover:bg-surface-panel"
+                }`}
+              >
+                {isLocked && <Lock className="w-3 h-3 text-red-500" />}
+                {item.label}
+              </button>
+            );
+          })}
 
           {/* Admin Panel Link */}
           <button
@@ -91,25 +106,46 @@ export default function Navbar({ activeTab, setActiveTab, openDrawer, user }: Na
               activeTab === "admin" ? "bg-red-950/60 font-bold" : ""
             }`}
           >
-            <Shield className="w-3.5 h-3.5" />
+            {!user ? <Lock className="w-3 h-3 text-red-500" /> : <Shield className="w-3.5 h-3.5" />}
             ADMIN PANEL
           </button>
         </nav>
 
-        {/* Right Quick Info & Drawer Button */}
-        <div className="flex items-center gap-3">
-          <button
-            onClick={() => setActiveTab("profile")}
-            className="hidden sm:flex items-center gap-2 bg-surface-card border border-surface-border px-3 py-1.5 rounded hover:border-red-600/50 transition-colors"
-          >
-            <div className="w-2 h-2 rounded-full bg-red-600 animate-pulse" />
-            <span className="text-xs font-mono-code font-bold text-zinc-200">
-              {user ? user.username : "demo_user"}
-            </span>
-            <span className="text-[10px] bg-red-950 border border-red-800 text-red-300 px-1.5 py-0.5 rounded uppercase font-mono-code font-bold">
-              {user ? user.plan.toUpperCase() : "VIP"}
-            </span>
-          </button>
+        {/* Right User State & Drawer Trigger */}
+        <div className="flex items-center gap-2.5">
+          {user ? (
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setActiveTab("profile")}
+                className="hidden sm:flex items-center gap-2 bg-surface-card border border-surface-border px-3 py-1.5 rounded hover:border-red-600/50 transition-colors"
+              >
+                <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                <span className="text-xs font-mono-code font-bold text-zinc-200">
+                  {user.username}
+                </span>
+                <span className="text-[10px] bg-red-950 border border-red-800 text-red-300 px-1.5 py-0.5 rounded uppercase font-mono-code font-bold">
+                  {user.plan.toUpperCase()}
+                </span>
+              </button>
+
+              <button
+                onClick={onLogoutClick}
+                title="Keluar / Logout"
+                className="p-2 bg-surface-card border border-surface-border rounded hover:border-red-600 hover:bg-red-950/30 text-zinc-400 hover:text-red-400 transition-colors"
+                aria-label="Logout"
+              >
+                <LogOut className="w-4 h-4" />
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={onLoginClick}
+              className="px-3.5 py-1.5 bg-red-600 hover:bg-red-500 text-black font-mono-code text-xs font-bold rounded flex items-center gap-1.5 transition-transform active:scale-95 shadow-[0_0_15px_rgba(220,38,38,0.3)]"
+            >
+              <LogIn className="w-3.5 h-3.5" />
+              <span>MASUK GOOGLE</span>
+            </button>
+          )}
 
           {/* Drawer Trigger */}
           <button
