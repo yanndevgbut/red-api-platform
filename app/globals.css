@@ -66,3 +66,44 @@ body {
 .accordion-inner {
   overflow: hidden;
 }
+
+/* Long paths, account names, and provider responses stay inside their panels. */
+body { overflow-wrap: anywhere; }
+button, input, select, textarea { max-inline-size: 100%; }
+button > svg { flex-shrink: 0; }
+button:focus-visible, input:focus-visible, select:focus-visible, a:focus-visible {
+  outline: 2px solid #f87171;
+  outline-offset: 3px;
+}
+pre { max-inline-size: 100%; overflow-x: auto; overflow-wrap: normal; }
+
+.hero-panel {
+  background: radial-gradient(ellipse at 86% 12%, rgb(153 27 27 / 24%), transparent 60%),
+    linear-gradient(125deg, #191216, #0d0d12 66%);
+  box-shadow: 0 24px 60px -42px rgb(239 68 68 / 48%);
+}
+.hero-title {
+  font-size: clamp(2.4rem, 8.5vw, 5.7rem);
+  line-height: .98;
+  text-wrap: balance;
+}
+.hero-kicker { animation: appear .5s both; }
+.hero-panel h1 { animation: appear .55s .08s both; }
+.hero-panel p { animation: appear .55s .14s both; }
+.action-button, .interactive-card { transition: transform .2s ease, border-color .2s ease, box-shadow .2s ease; }
+@media (hover: hover) {
+  .action-button:hover { transform: translateY(-2px); }
+  .interactive-card:hover { transform: translateY(-3px); box-shadow: 0 16px 40px -30px #ef4444; }
+}
+.action-button:active { transform: translateY(1px) scale(.98); }
+@keyframes appear {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .01ms !important;
+  }
+}

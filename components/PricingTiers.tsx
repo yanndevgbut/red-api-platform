@@ -82,7 +82,7 @@ export default function PricingTiers() {
         </p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 items-stretch">
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-6 items-stretch">
         {plans.map((p) => (
           <div
             key={p.name}
@@ -136,7 +136,7 @@ export default function PricingTiers() {
 
             <button
               onClick={() => alert(`Redirecting to checkout for ${p.name}...`)}
-              className={`w-full py-2.5 rounded font-bebas text-xl tracking-wider uppercase transition-colors ${p.btnClass}`}
+              className={`action-button w-full px-2 py-2.5 rounded font-bebas text-xl tracking-wider uppercase transition-colors ${p.btnClass}`}
             >
               {p.btnLabel}
             </button>

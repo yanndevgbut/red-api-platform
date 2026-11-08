@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useEffect, useRef } from "react";
 import { X, ArrowRight, Server, Shield, Database, Lock, LogIn, LogOut } from "lucide-react";
 import { Profile } from "@/types";
 
@@ -21,6 +21,17 @@ export default function Drawer({
   onLoginClick,
   onLogoutClick,
 }: DrawerProps) {
+  const closeButton = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const previous = document.activeElement;
+    closeButton.current?.focus();
+    return () => {
+      if (previous instanceof HTMLElement) previous.focus();
+    };
+  }, [isOpen]);
+
   const handleNav = (tabId: string) => {
     setActiveTab(tabId);
     onClose();
@@ -45,7 +56,11 @@ export default function Drawer({
 
       {/* Slide-over Drawer from Right */}
       <aside
-        className={`fixed inset-y-0 right-0 w-80 sm:w-96 bg-surface-panel border-l border-surface-border z-50 transform transition-transform duration-300 ease-out shadow-2xl flex flex-col justify-between ${
+        inert={!isOpen}
+        aria-hidden={!isOpen}
+        aria-label="Menu navigasi"
+        onKeyDown={event => { if (event.key === "Escape") onClose(); }}
+        className={`fixed inset-y-0 right-0 w-full max-w-[22rem] sm:max-w-sm bg-surface-panel border-l border-surface-border z-50 transform transition-transform duration-300 ease-out shadow-2xl flex flex-col justify-between ${
           isOpen ? "translate-x-0" : "translate-x-full"
         }`}
       >
@@ -56,8 +71,10 @@ export default function Drawer({
             <span className="font-bebas text-2xl text-white tracking-wider">NAVIGATION DRAWER</span>
           </div>
           <button
+            ref={closeButton}
             onClick={onClose}
-            className="w-8 h-8 rounded border border-surface-border bg-surface hover:bg-red-950/50 hover:border-red-600 text-zinc-400 hover:text-white flex items-center justify-center transition-colors"
+            aria-label="Tutup menu navigasi"
+            className="w-8 h-8 shrink-0 rounded border border-surface-border bg-surface hover:bg-red-950/50 hover:border-red-600 text-zinc-400 hover:text-white flex items-center justify-center transition-colors"
           >
             <X className="w-4 h-4" />
           </button>
@@ -69,7 +86,7 @@ export default function Drawer({
           {/* User Status Card */}
           {user ? (
             <div className="bg-surface-card border border-surface-border p-3.5 rounded space-y-2">
-              <div className="flex justify-between items-center">
+              <div className="flex flex-wrap gap-2 justify-between items-center">
                 <span className="text-zinc-400">ACTIVE ACCOUNT:</span>
                 <span className="px-1.5 py-0.2 bg-red-950 border border-red-800 text-red-300 text-[10px] rounded font-bold uppercase">
                   {user.plan} TIER
@@ -165,20 +182,20 @@ export default function Drawer({
                 <Server className="w-3.5 h-3.5 text-zinc-500" />
                 Pterodactyl Node:
               </span>
-              <span className="text-emerald-400 font-bold">ONLINE</span>
+              <span className="text-emerald-400 font-bold">Lihat status</span>
             </div>
             <div className="flex items-center justify-between py-1 px-1">
               <span className="flex items-center gap-1.5">
                 <Database className="w-3.5 h-3.5 text-zinc-500" />
                 Supabase Engine:
               </span>
-              <span className="text-zinc-300">CONNECTED</span>
+              <span className="text-zinc-300">Auth & database</span>
             </div>
           </div>
         </div>
 
         {/* Footer */}
-        <div className="p-5 border-t border-surface-border bg-surface/50 text-xs font-mono-code text-zinc-500 flex justify-between items-center">
+        <div className="p-5 border-t border-surface-border bg-surface/50 text-xs font-mono-code text-zinc-500 flex flex-wrap gap-2 justify-between items-center">
           <span>RED/API INFRASTRUCTURE</span>
           <span className="text-red-500 font-bold">2026</span>
         </div>

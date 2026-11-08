@@ -1,37 +1,39 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+import { NextRequest, NextResponse } from "next/server";
+import { createClient } from "@supabase/supabase-js";
+import { getSupabasePublicConfig } from "@/lib/supabase-config";
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://mntrffrihkbxvtxsktkw.supabase.co';
-const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1udHJmZnJpaGtieHZ0eHNrdGt3Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc5NDA0Nzg1NiwiZXhwIjoyMTA5NjIzODU2fQ.1bqCVWsOwZtQgQ70W3V2IRBY9Zq9wCpXNZCk1u798AI';
-
-const supabaseAdmin = createClient(supabaseUrl, supabaseKey, {
-  auth: { persistSession: false, autoRefreshToken: false }
-});
-
-export const dynamic = 'force-dynamic';
+function respond(body: unknown, status = 200) {
+  return NextResponse.json(body, { status, headers: { "Cache-Control": "private, no-store" } });
+}
 
 export async function GET(req: NextRequest) {
+  const token = req.headers.get("authorization")?.match(/^Bearer (\S+)$/i)?.[1];
+  if (!token) return respond({ error: "Login diperlukan." }, 401);
+
   try {
-    const userId = req.nextUrl.searchParams.get('userId');
-    if (!userId) {
-      return NextResponse.json({ error: 'Missing userId' }, { status: 400 });
-    }
+    const { url, key } = getSupabasePublicConfig();
+    const supabase = createClient(url, key, {
+      global: { headers: { Authorization: `Bearer ${token}` } },
+      auth: { persistSession: false, autoRefreshToken: false },
+    });
+    const { data: { user }, error } = await supabase.auth.getUser(token);
+    if (error || !user) return respond({ error: "Sesi tidak valid." }, 401);
 
-    const { data: profile } = await supabaseAdmin
-      .from('profiles')
-      .select('*')
-      .eq('id', userId)
-      .maybeSingle();
+    const requestedId = req.nextUrl.searchParams.get("userId");
+    if (requestedId && requestedId !== user.id) return respond({ error: "Akses ditolak." }, 403);
 
-    const { data: apiKey } = await supabaseAdmin
-      .from('api_keys')
-      .select('*')
-      .eq('user_id', userId)
-      .eq('is_active', true)
-      .maybeSingle();
-
-    return NextResponse.json({ profile, apiKey });
-  } catch (err: any) {
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    const [profile, apiKey] = await Promise.all([
+      supabase.from("profiles")
+        .select("id,username,email,role,plan,limit_daily,limit_remaining,banned,created_at")
+        .eq("id", user.id).maybeSingle(),
+      supabase.from("api_keys")
+        .select("id,user_id,key,is_active,created_at")
+        .eq("user_id", user.id).eq("is_active", true)
+        .order("created_at", { ascending: false }).order("id", { ascending: false }).limit(1).maybeSingle(),
+    ]);
+    if (profile.error || apiKey.error) return respond({ error: "Gagal memuat akun." }, 502);
+    return respond({ profile: profile.data, apiKey: apiKey.data });
+  } catch {
+    return respond({ error: "Layanan akun belum tersedia." }, 503);
   }
 }

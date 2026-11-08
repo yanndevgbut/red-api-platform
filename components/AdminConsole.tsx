@@ -1,7 +1,8 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { supabase } from "@/lib/supabase";
+import { getSupabase } from "@/lib/supabase";
+import { isFeaturePath } from "@/lib/api";
 import { Endpoint, Profile } from "@/types";
 import { Shield, Plus, Trash2, Power, RefreshCw, AlertTriangle } from "lucide-react";
 
@@ -26,15 +27,15 @@ export default function AdminConsole() {
   const loadData = async () => {
     setLoading(true);
     // Load endpoints
-    const { data: epData } = await supabase.from("endpoints").select("*").order("id", { ascending: true });
+    const { data: epData } = await getSupabase().from("endpoints").select("*").order("id", { ascending: true });
     if (epData) setEndpoints(epData as Endpoint[]);
 
     // Load users
-    const { data: uData } = await supabase.from("profiles").select("*").order("created_at", { ascending: false });
+    const { data: uData } = await getSupabase().from("profiles").select("*").order("created_at", { ascending: false });
     if (uData) setUsers(uData as Profile[]);
 
     // Load logs
-    const { data: logData } = await supabase
+    const { data: logData } = await getSupabase()
       .from("api_logs")
       .select("*")
       .order("id", { ascending: false })
@@ -42,7 +43,7 @@ export default function AdminConsole() {
     if (logData) setLogs(logData);
 
     // Load settings
-    const { data: sett } = await supabase.from("system_settings").select("*").eq("id", 1).single();
+    const { data: sett } = await getSupabase().from("system_settings").select("*").eq("id", 1).single();
     if (sett) setMaintenance(Boolean(sett.maintenance_mode));
 
     setLoading(false);
@@ -56,7 +57,7 @@ export default function AdminConsole() {
 
   const toggleMaintenance = async () => {
     const nextState = !maintenance;
-    const { error } = await supabase
+    const { error } = await getSupabase()
       .from("system_settings")
       .update({
         maintenance_mode: nextState,
@@ -77,20 +78,20 @@ export default function AdminConsole() {
 
   const addEndpoint = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newEp.name || !newEp.path) {
-      alert("Nama dan Path wajib diisi!");
+    if (!newEp.name.trim() || !isFeaturePath(newEp.path.trim())) {
+      alert("Isi nama dan path API yang valid, misalnya /api/download/tiktok.");
       return;
     }
 
-    const { error } = await supabase.from("endpoints").insert({
-      name: newEp.name,
+    const { error } = await getSupabase().from("endpoints").insert({
+      name: newEp.name.trim(),
       category: newEp.category,
       method: newEp.method,
       min_plan: newEp.min_plan,
-      path: newEp.path,
+      path: newEp.path.trim(),
       description: newEp.description || "Custom endpoint",
       status: "active",
-      params: [{ name: "apikey", type: "string", required: true, default: "REQUIRED_KEY" }],
+      params: [],
     });
 
     if (error) {
@@ -111,14 +112,15 @@ export default function AdminConsole() {
 
   const deleteEndpoint = async (id: number) => {
     if (!confirm("Hapus endpoint ini dari registry?")) return;
-    const { error } = await supabase.from("endpoints").delete().eq("id", id);
+    const { error } = await getSupabase().from("endpoints").delete().eq("id", id);
     if (!error) {
       setEndpoints((prev) => prev.filter((e) => e.id !== id));
     }
   };
 
   const updateUserRole = async (userId: string, role: "user" | "admin") => {
-    await supabase.from("profiles").update({ role }).eq("id", userId);
+    const { error } = await getSupabase().from("profiles").update({ role }).eq("id", userId);
+    if (error) return alert("Gagal memperbarui role.");
     setUsers((prev) => prev.map((u) => (u.id === userId ? { ...u, role } : u)));
   };
 
@@ -128,14 +130,16 @@ export default function AdminConsole() {
     if (plan === "vip") limit = 15000;
     if (plan === "enterprise") limit = 999999;
 
-    await supabase.from("profiles").update({ plan, limit_daily: limit }).eq("id", userId);
+    const { error } = await getSupabase().from("profiles").update({ plan, limit_daily: limit }).eq("id", userId);
+    if (error) return alert("Gagal memperbarui paket.");
     setUsers((prev) =>
       prev.map((u) => (u.id === userId ? { ...u, plan, limit_daily: limit } : u))
     );
   };
 
   const toggleBanUser = async (userId: string, currentBanned: boolean) => {
-    await supabase.from("profiles").update({ banned: !currentBanned }).eq("id", userId);
+    const { error } = await getSupabase().from("profiles").update({ banned: !currentBanned }).eq("id", userId);
+    if (error) return alert("Gagal memperbarui status akun.");
     setUsers((prev) =>
       prev.map((u) => (u.id === userId ? { ...u, banned: !currentBanned } : u))
     );
@@ -146,7 +150,7 @@ export default function AdminConsole() {
       {/* Top Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-surface-border pb-4">
         <div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <span className="px-2 py-0.5 rounded bg-red-600 text-black text-[10px] font-mono-code font-bold">
               SUPERADMIN
             </span>
@@ -184,7 +188,7 @@ export default function AdminConsole() {
       </div>
 
       {/* Subtabs */}
-      <div className="flex gap-2 border-b border-surface-border pb-2 text-xs font-mono-code">
+      <div className="flex flex-wrap gap-2 border-b border-surface-border pb-2 text-xs font-mono-code">
         {[
           { id: "endpoints", label: `ENDPOINT REGISTRY (${endpoints.length})` },
           { id: "users", label: `USER MANAGER (${users.length})` },
@@ -209,7 +213,7 @@ export default function AdminConsole() {
         <div className="space-y-6">
           {/* Add Form */}
           <form onSubmit={addEndpoint} className="bg-surface-panel border border-surface-border rounded-lg p-5 space-y-4">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-wrap gap-2 items-center justify-between">
               <h3 className="font-bebas text-2xl text-white">+ REGISTER NEW ENDPOINT</h3>
               <span className="text-xs font-mono-code text-zinc-500">Live synced into Supabase</span>
             </div>
@@ -306,7 +310,7 @@ export default function AdminConsole() {
             <div className="p-3 bg-surface-card border-b border-surface-border text-xs font-mono-code text-zinc-400">
               REGISTERED ENDPOINTS
             </div>
-            <div className="overflow-x-auto">
+            <div className="overflow-x-auto" tabIndex={0} aria-label="Tabel admin, dapat digulir horizontal">
               <table className="w-full text-left text-xs font-mono-code">
                 <thead className="bg-surface-card/60 text-zinc-400 border-b border-surface-border">
                   <tr>
@@ -365,7 +369,7 @@ export default function AdminConsole() {
           <div className="p-3 bg-surface-card border-b border-surface-border text-xs font-mono-code text-zinc-400">
             ALL USER PROFILES (SUPABASE AUTH)
           </div>
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto" tabIndex={0} aria-label="Tabel admin, dapat digulir horizontal">
             <table className="w-full text-left text-xs font-mono-code">
               <thead className="bg-surface-card text-zinc-400 border-b border-surface-border">
                 <tr>

@@ -12,8 +12,9 @@ import UserDashboard from "@/components/UserDashboard";
 import AdminConsole from "@/components/AdminConsole";
 import AuthModal from "@/components/AuthModal";
 import { Profile, ApiKey } from "@/types";
-import { ArrowRight, Lock, LogIn } from "lucide-react";
-import { supabase } from "@/lib/supabase";
+import { ArrowRight, Braces, Lock, LogIn } from "lucide-react";
+import { getSupabase } from "@/lib/supabase";
+import type { Session } from "@supabase/supabase-js";
 
 export default function Home() {
   const [activeTab, setActiveTab] = useState("landing");
@@ -22,100 +23,60 @@ export default function Home() {
   const [apiKey, setApiKey] = useState<ApiKey | null>(null);
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [authReason, setAuthReason] = useState<string>("");
-  const [isAuthChecking, setIsAuthChecking] = useState(true);
-
-  // Load active user profile & API key
-  const loadUserData = async () => {
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session && session.user) {
-        // Try internal route handler (bypasses RLS)
-        try {
-          const res = await fetch(`/api/user?userId=${session.user.id}`);
-          if (res.ok) {
-            const json = await res.json();
-            if (json.profile) setUser(json.profile as Profile);
-            if (json.apiKey) setApiKey(json.apiKey as ApiKey);
-            if (json.profile && json.apiKey) return;
-          }
-        } catch (apiErr) {
-          console.warn("Internal user API fetch failed, falling back to direct Supabase:", apiErr);
-        }
-
-        // Load profile from Supabase
-        const { data: prof } = await supabase
-          .from("profiles")
-          .select("*")
-          .eq("id", session.user.id)
-          .maybeSingle();
-
-        if (prof) {
-          setUser(prof as Profile);
-        } else {
-          // If trigger takes a moment or profile not synced yet, fallback to session metadata
-          setUser({
-            id: session.user.id,
-            username: session.user.user_metadata?.name || session.user.email?.split("@")[0] || "user",
-            email: session.user.email || "",
-            role: "user",
-            plan: "free",
-            limit_daily: 100,
-            limit_remaining: 100,
-            banned: false,
-            created_at: new Date().toISOString(),
-          });
-        }
-
-        // Load key
-        const { data: k } = await supabase
-          .from("api_keys")
-          .select("*")
-          .eq("user_id", session.user.id)
-          .eq("is_active", true)
-          .maybeSingle();
-
-        if (k) setApiKey(k as ApiKey);
-      } else {
-        setUser(null);
-        setApiKey(null);
-      }
-    } catch (err) {
-      console.error("Error loading auth session:", err);
-    } finally {
-      setIsAuthChecking(false);
-    }
-  };
+  const [session, setSession] = useState<Session | null>(null);
+  const [refresh, setRefresh] = useState(0);
+  const [accountError, setAccountError] = useState("");
 
   useEffect(() => {
-    loadUserData();
+    const tab = new URLSearchParams(window.location.search).get("tab");
+    if (tab && ["landing", "docs", "profile", "pricing", "admin"].includes(tab)) setActiveTab(tab);
 
-    // Listen to real-time auth state changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (session) {
-        await loadUserData();
-      } else {
-        setUser(null);
-        setApiKey(null);
-      }
-    });
+    try {
+      const { data: { subscription } } = getSupabase().auth.onAuthStateChange((_event, nextSession) => {
+        setSession(nextSession);
+      });
+      return () => subscription.unsubscribe();
+    } catch {
+      setAccountError("Layanan akun belum dikonfigurasi.");
+    }
+  }, []);
 
-    // Handle URL search params on client (e.g. ?tab=docs after oauth redirect)
-    if (typeof window !== "undefined") {
-      const params = new URLSearchParams(window.location.search);
-      const tabParam = params.get("tab");
-      if (tabParam) {
-        setActiveTab(tabParam);
+  useEffect(() => {
+    if (!session) {
+      setUser(null);
+      setApiKey(null);
+      return;
+    }
+    const controller = new AbortController();
+    setAccountError("");
+    async function loadAccount(accessToken: string) {
+      try {
+        const res = await fetch("/api/user", {
+          headers: { Authorization: `Bearer ${accessToken}` },
+          signal: controller.signal,
+          cache: "no-store",
+        });
+        if (!res.ok) throw new Error();
+        const data = await res.json();
+        if (controller.signal.aborted) return;
+        setUser(data.profile);
+        setApiKey(data.apiKey);
+        if (!data.profile) setAccountError("Profil belum tersedia. Hubungi administrator.");
+      } catch {
+        if (!controller.signal.aborted) setAccountError("Gagal memuat akun. Silakan coba lagi.");
       }
     }
+    void loadAccount(session.access_token);
+    return () => controller.abort();
+  }, [session, refresh]);
 
-    return () => {
-      subscription.unsubscribe();
-    };
-  }, []);
+  const currentUser = session?.user.id === user?.id ? user : null;
+  const currentKey = currentUser?.id === apiKey?.user_id ? apiKey : null;
+  const canAdmin = currentUser?.role === "admin" && !currentUser.banned;
 
   const handleTabSelect = (tabId: string) => {
     const protectedTabs = ["docs", "profile", "admin"];
-    if (protectedTabs.includes(tabId) && !user) {
+    if (protectedTabs.includes(tabId) && !session) {
       const reasons: Record<string, string> = {
         docs: "Halaman dokumentasi & playground interaktif memerlukan login Google untuk menggunakan API Key.",
         profile: "Halaman manajemen profil & API Key membutuhkan autentikasi akun Google.",
@@ -130,7 +91,12 @@ export default function Home() {
   };
 
   const handleLogout = async () => {
-    await supabase.auth.signOut();
+    const { error } = await getSupabase().auth.signOut();
+    if (error) {
+      setAccountError("Gagal keluar. Silakan coba lagi.");
+      return;
+    }
+    setSession(null);
     setUser(null);
     setApiKey(null);
     if (["docs", "profile", "admin"].includes(activeTab)) {
@@ -148,7 +114,7 @@ export default function Home() {
         activeTab={activeTab}
         setActiveTab={handleTabSelect}
         openDrawer={() => setDrawerOpen(true)}
-        user={user}
+        user={currentUser}
         onLoginClick={() => {
           setAuthReason("Masuk dengan Google untuk membuka akses seluruh fitur platform.");
           setAuthModalOpen(true);
@@ -161,7 +127,7 @@ export default function Home() {
         isOpen={drawerOpen}
         onClose={() => setDrawerOpen(false)}
         setActiveTab={handleTabSelect}
-        user={user}
+        user={currentUser}
         onLoginClick={() => {
           setAuthReason("Masuk dengan Google untuk membuka akses seluruh fitur platform.");
           setAuthModalOpen(true);
@@ -177,18 +143,28 @@ export default function Home() {
       />
 
       {/* Main Container */}
-      <main className="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6">
+      <main className="flex-1 min-w-0 max-w-7xl w-full mx-auto p-4 sm:p-6">
+        {accountError && (
+          <div role="status" className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-red-900 bg-red-950/30 p-3 text-sm text-red-200">
+            <span>{accountError}</span>
+            {session && <button className="underline" onClick={() => setRefresh(value => value + 1)}>Coba lagi</button>}
+          </div>
+        )}
         
         {/* VIEW 1: LANDING / OVERVIEW (Public) */}
         {activeTab === "landing" && (
           <section className="space-y-12 animate-fade-in">
             {/* Hero Section */}
-            <div className="pt-6 pb-6 border-b border-surface-border">
+            <div className="hero-panel relative rounded-2xl border border-surface-border p-4 sm:p-8 lg:p-12">
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-                <div className="lg:col-span-7 space-y-6">
-                  <h1 className="font-bebas text-6xl sm:text-7xl lg:text-8xl tracking-tight text-white leading-[0.9]">
+                <div className="min-w-0 lg:col-span-7 space-y-5 sm:space-y-6">
+                  <div className="hero-kicker inline-flex max-w-full items-center gap-2 rounded-full border border-red-800/80 bg-red-950/35 px-3 py-1.5 font-mono-code text-[10px] tracking-widest text-red-200">
+                    <Braces aria-hidden="true" className="h-3.5 w-3.5 shrink-0 text-red-400" />
+                    RED/API · DEVELOPER GATEWAY
+                  </div>
+                  <h1 className="hero-title font-bebas tracking-tight text-white">
                     FAST, RELIABLE <br />
-                    <span className="text-red-600">REST API PLATFORM</span> <br />
+                    <span className="text-red-400">REST API PLATFORM</span> <br />
                     FOR BUILDERS
                   </h1>
 
@@ -196,10 +172,10 @@ export default function Home() {
                     Infrastruktur REST API terdistribusi dengan modul AI, Media Scraping, Tooling, dan WhatsApp Engine. Dioptimalkan untuk performa tinggi dengan latency rendah.
                   </p>
 
-                  <div className="flex flex-wrap items-center gap-4 pt-2">
+                  <div className="grid grid-cols-1 min-[420px]:flex flex-wrap items-center gap-3 pt-2">
                     <button
                       onClick={() => handleTabSelect("docs")}
-                      className="px-6 py-3 bg-red-600 hover:bg-red-500 text-black font-bebas text-2xl tracking-wider uppercase transition-all active:scale-95 shadow-[0_0_20px_rgba(220,38,38,0.3)] hover:shadow-[0_0_30px_rgba(220,38,38,0.6)] flex items-center gap-2"
+                      className="action-button justify-center rounded-lg px-4 sm:px-6 py-3 bg-red-500 hover:bg-red-400 text-black font-bebas text-2xl tracking-wider uppercase transition-all active:scale-95 shadow-[0_0_20px_rgba(220,38,38,0.3)] hover:shadow-[0_0_30px_rgba(220,38,38,0.6)] flex items-center gap-2"
                     >
                       EXPLORE ENDPOINTS
                       <ArrowRight className="w-5 h-5" />
@@ -207,7 +183,7 @@ export default function Home() {
 
                     <button
                       onClick={() => handleTabSelect("pricing")}
-                      className="px-6 py-3 border border-surface-border hover:border-red-600 text-white font-bebas text-2xl tracking-wider uppercase transition-colors"
+                      className="action-button rounded-lg px-4 sm:px-6 py-3 border border-surface-border hover:border-red-500 text-white font-bebas text-2xl tracking-wider uppercase transition-colors"
                     >
                       UPGRADE TO VIP
                     </button>
@@ -215,7 +191,7 @@ export default function Home() {
                 </div>
 
                 {/* Right Code Box */}
-                <div className="lg:col-span-5">
+                <div className="min-w-0 lg:col-span-5 lg:self-center">
                   <CodeSnippet />
                 </div>
               </div>
@@ -229,8 +205,8 @@ export default function Home() {
         {/* VIEW 2: DOCS & ACCORDION INLINE TESTER (Protected) */}
         {activeTab === "docs" && (
           <section className="animate-fade-in">
-            {!user ? (
-              <div className="p-12 text-center bg-surface-panel border-2 border-red-900/60 rounded-xl space-y-4 max-w-xl mx-auto shadow-2xl">
+            {!currentUser ? (
+              <div className="p-4 sm:p-10 text-center bg-surface-panel border-2 border-red-900/60 rounded-xl space-y-4 max-w-xl mx-auto shadow-2xl">
                 <div className="w-12 h-12 bg-red-950/80 border border-red-800 rounded-full flex items-center justify-center mx-auto text-red-500">
                   <Lock className="w-6 h-6" />
                 </div>
@@ -252,7 +228,7 @@ export default function Home() {
                 </button>
               </div>
             ) : (
-              <DocsAccordion />
+              <DocsAccordion defaultKey={currentKey?.key} />
             )}
           </section>
         )}
@@ -267,8 +243,8 @@ export default function Home() {
         {/* VIEW 4: PROFILE & API KEY (Protected) */}
         {activeTab === "profile" && (
           <section className="animate-fade-in">
-            {!user ? (
-              <div className="p-12 text-center bg-surface-panel border-2 border-red-900/60 rounded-xl space-y-4 max-w-xl mx-auto shadow-2xl">
+            {!currentUser ? (
+              <div className="p-4 sm:p-10 text-center bg-surface-panel border-2 border-red-900/60 rounded-xl space-y-4 max-w-xl mx-auto shadow-2xl">
                 <div className="w-12 h-12 bg-red-950/80 border border-red-800 rounded-full flex items-center justify-center mx-auto text-red-500">
                   <Lock className="w-6 h-6" />
                 </div>
@@ -290,7 +266,7 @@ export default function Home() {
                 </button>
               </div>
             ) : (
-              <UserDashboard user={user} apiKey={apiKey} onRefresh={loadUserData} />
+              <UserDashboard user={currentUser} apiKey={currentKey} onRefresh={() => { setApiKey(null); setRefresh(value => value + 1); }} />
             )}
           </section>
         )}
@@ -298,8 +274,8 @@ export default function Home() {
         {/* VIEW 5: ADMIN CONSOLE (Protected) */}
         {activeTab === "admin" && (
           <section className="animate-fade-in">
-            {!user ? (
-              <div className="p-12 text-center bg-surface-panel border-2 border-red-900/60 rounded-xl space-y-4 max-w-xl mx-auto shadow-2xl">
+            {!currentUser ? (
+              <div className="p-4 sm:p-10 text-center bg-surface-panel border-2 border-red-900/60 rounded-xl space-y-4 max-w-xl mx-auto shadow-2xl">
                 <div className="w-12 h-12 bg-red-950/80 border border-red-800 rounded-full flex items-center justify-center mx-auto text-red-500">
                   <Lock className="w-6 h-6" />
                 </div>
@@ -321,7 +297,9 @@ export default function Home() {
                 </button>
               </div>
             ) : (
-              <AdminConsole />
+              canAdmin ? <AdminConsole /> : (
+                <p role="status" className="rounded-xl border border-red-900 bg-surface-panel p-5 text-red-300">Akses konsol memerlukan akun administrator aktif.</p>
+              )
             )}
           </section>
         )}
@@ -331,7 +309,7 @@ export default function Home() {
       {/* Global Footer */}
       <footer className="border-t border-surface-border bg-surface-panel py-8 mt-16 text-xs font-mono-code text-zinc-500">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-2">
             <span className="font-bebas text-xl text-white">
               RED<span className="text-red-600">/API</span>
             </span>

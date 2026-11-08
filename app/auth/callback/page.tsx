@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { supabase } from "@/lib/supabase";
+import { getSupabase } from "@/lib/supabase";
 import { Loader2 } from "lucide-react";
 
 export default function AuthCallbackPage() {
@@ -12,7 +12,7 @@ export default function AuthCallbackPage() {
   useEffect(() => {
     async function handleAuth() {
       try {
-        const { data, error } = await supabase.auth.getSession();
+        const { data, error } = await getSupabase().auth.getSession();
         if (error) {
           setErrorMsg(error.message);
           return;
@@ -22,7 +22,7 @@ export default function AuthCallbackPage() {
           router.replace("/?tab=docs");
         } else {
           // Listen to auth state change if session is being processed from hash
-          const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
+          const { data: authListener } = getSupabase().auth.onAuthStateChange((event, session) => {
             if (session) {
               authListener.subscription.unsubscribe();
               router.replace("/?tab=docs");

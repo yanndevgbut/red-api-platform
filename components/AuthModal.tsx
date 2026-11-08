@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useState } from "react";
-import { supabase } from "@/lib/supabase";
+import React, { useEffect, useRef, useState } from "react";
+import { getSupabase } from "@/lib/supabase";
 import { X, ShieldAlert, KeyRound, Terminal, CheckCircle2, Loader2 } from "lucide-react";
 
 interface AuthModalProps {
@@ -14,6 +14,14 @@ export default function AuthModal({ isOpen, onClose, reason }: AuthModalProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const dialog = useRef<HTMLDialogElement>(null);
+
+  useEffect(() => {
+    const element = dialog.current;
+    if (isOpen && element && !element.open) element.showModal();
+    return () => element?.close();
+  }, [isOpen]);
+
   if (!isOpen) return null;
 
   const handleGoogleLogin = async () => {
@@ -21,19 +29,12 @@ export default function AuthModal({ isOpen, onClose, reason }: AuthModalProps) {
     setError(null);
 
     try {
-      const origin = typeof window !== "undefined" && window.location.origin
-        ? window.location.origin
-        : (process.env.NEXT_PUBLIC_SITE_URL || "https://red-api-platform.vercel.app");
-      const redirectTo = `${origin}/auth/callback`;
+      const redirectTo = `${window.location.origin}/auth/callback`;
 
-      const { error } = await supabase.auth.signInWithOAuth({
+      const { error } = await getSupabase().auth.signInWithOAuth({
         provider: "google",
         options: {
           redirectTo,
-          queryParams: {
-            access_type: "offline",
-            prompt: "consent",
-          },
         },
       });
 
@@ -48,25 +49,27 @@ export default function AuthModal({ isOpen, onClose, reason }: AuthModalProps) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fade-in">
-      <div className="relative w-full max-w-md bg-surface-panel border-2 border-red-600/80 rounded-xl p-6 sm:p-8 shadow-[0_0_50px_rgba(220,38,38,0.35)] space-y-6">
+    <dialog ref={dialog} onCancel={onClose} aria-labelledby="login-title"
+      className="w-[calc(100%-2rem)] max-w-md rounded-xl bg-transparent text-zinc-100 backdrop:bg-black/80 backdrop:backdrop-blur-sm">
+      <div className="relative w-full max-w-md max-h-[calc(100dvh-2rem)] overflow-y-auto bg-surface-panel border-2 border-red-600/80 rounded-xl p-6 sm:p-8 shadow-[0_0_50px_rgba(220,38,38,0.35)] space-y-6">
         
         {/* Close Button */}
         <button
           onClick={onClose}
+          aria-label="Tutup dialog login"
           className="absolute top-4 right-4 w-8 h-8 rounded border border-surface-border bg-surface hover:bg-red-950/50 hover:border-red-600 text-zinc-400 hover:text-white flex items-center justify-center transition-colors"
         >
           <X className="w-4 h-4" />
         </button>
 
         {/* Modal Header */}
-        <div className="space-y-2">
+        <div className="space-y-2 pr-6">
           <div className="inline-flex items-center gap-2 px-2.5 py-1 bg-red-950/70 border border-red-800 text-red-300 text-[10px] font-mono-code rounded uppercase font-bold">
             <ShieldAlert className="w-3.5 h-3.5 text-red-500" />
             LOGIN REQUIRED · OTENTIKASI WAJIB
           </div>
 
-          <h3 className="font-bebas text-4xl text-white tracking-wide">
+          <h3 id="login-title" className="font-bebas text-4xl text-white tracking-wide">
             MASUK DENGAN <span className="text-red-600">AKUN GOOGLE</span>
           </h3>
 
@@ -102,7 +105,7 @@ export default function AuthModal({ isOpen, onClose, reason }: AuthModalProps) {
           <button
             onClick={handleGoogleLogin}
             disabled={loading}
-            className="w-full py-3 px-4 bg-white hover:bg-zinc-100 text-black font-mono-code text-xs font-bold rounded flex items-center justify-center gap-3 transition-transform active:scale-95 shadow-lg disabled:opacity-50"
+            className="w-full py-3 px-4 bg-white hover:bg-zinc-100 text-black font-mono-code text-xs font-bold rounded flex items-center justify-center gap-2 sm:gap-3 transition-transform active:scale-95 shadow-lg disabled:opacity-50"
           >
             {loading ? (
               <>
@@ -112,7 +115,7 @@ export default function AuthModal({ isOpen, onClose, reason }: AuthModalProps) {
             ) : (
               <>
                 {/* Official Google 'G' Icon */}
-                <svg className="w-4 h-4" viewBox="0 0 24 24">
+                <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24">
                   <path
                     fill="#4285F4"
                     d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
@@ -141,6 +144,6 @@ export default function AuthModal({ isOpen, onClose, reason }: AuthModalProps) {
         </div>
 
       </div>
-    </div>
+    </dialog>
   );
 }

@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from "react";
 import { Terminal, Shield, Menu, Lock, LogIn, LogOut, User } from "lucide-react";
 import { Profile } from "@/types";
-import { getApiBaseUrl } from "@/lib/api";
+import { API_BASE } from "@/lib/api";
 
 interface NavbarProps {
   activeTab: string;
@@ -28,7 +28,7 @@ export default function Navbar({
     async function checkPing() {
       const start = Date.now();
       try {
-        const baseUrl = getApiBaseUrl();
+        const baseUrl = API_BASE;
         const res = await fetch(`${baseUrl}/health`, { signal: AbortSignal.timeout(5000) });
         if (res.ok) {
           setPing(Date.now() - start);
@@ -54,7 +54,7 @@ export default function Navbar({
 
   return (
     <header className="border-b border-surface-border bg-surface/90 backdrop-blur sticky top-0 z-40">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 min-h-16 py-2 flex items-center justify-between gap-2">
         
         {/* Logo */}
         <div className="flex items-center gap-3">
@@ -71,7 +71,7 @@ export default function Navbar({
           </button>
 
           {/* System Status Indicator */}
-          <div className="hidden sm:flex items-center gap-2 ml-4 px-2.5 py-1 bg-surface-panel border border-surface-border rounded text-[11px] font-mono-code">
+          <div className="hidden md:flex items-center gap-2 ml-2 px-2.5 py-1 bg-surface-panel border border-surface-border rounded text-[11px] font-mono-code">
             <span className={`w-1.5 h-1.5 rounded-full ${ping !== null ? "bg-emerald-500 animate-pulse" : "bg-red-500"}`} />
             <span className="text-zinc-400">PTERO NODE:</span>
             <span className={ping !== null ? "text-emerald-400 font-bold" : "text-red-400 font-bold"}>
@@ -81,7 +81,7 @@ export default function Navbar({
         </div>
 
         {/* Desktop Nav */}
-        <nav className="hidden lg:flex items-center gap-1 text-xs font-mono-code tracking-wider uppercase">
+        <nav className="hidden xl:flex items-center gap-1 text-xs font-mono-code tracking-wider uppercase">
           {navItems.map((item) => {
             const isLocked = item.protected && !user;
             return (
@@ -113,15 +113,15 @@ export default function Navbar({
         </nav>
 
         {/* Right User State & Drawer Trigger */}
-        <div className="flex items-center gap-2.5">
+        <div className="flex items-center gap-1.5 sm:gap-2.5">
           {user ? (
             <div className="flex items-center gap-2">
               <button
                 onClick={() => setActiveTab("profile")}
-                className="hidden sm:flex items-center gap-2 bg-surface-card border border-surface-border px-3 py-1.5 rounded hover:border-red-600/50 transition-colors"
+                className="hidden md:flex max-w-[12rem] min-w-0 items-center gap-2 bg-surface-card border border-surface-border px-3 py-1.5 rounded hover:border-red-600/50 transition-colors"
               >
                 <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                <span className="text-xs font-mono-code font-bold text-zinc-200">
+                <span className="min-w-0 truncate text-xs font-mono-code font-bold text-zinc-200">
                   {user.username}
                 </span>
                 <span className="text-[10px] bg-red-950 border border-red-800 text-red-300 px-1.5 py-0.5 rounded uppercase font-mono-code font-bold">
@@ -141,10 +141,10 @@ export default function Navbar({
           ) : (
             <button
               onClick={onLoginClick}
-              className="px-3.5 py-1.5 bg-red-600 hover:bg-red-500 text-black font-mono-code text-xs font-bold rounded flex items-center gap-1.5 transition-transform active:scale-95 shadow-[0_0_15px_rgba(220,38,38,0.3)]"
+              className="action-button px-2 sm:px-3.5 py-2 bg-red-500 hover:bg-red-500 text-black font-mono-code text-xs font-bold rounded flex items-center gap-1.5 transition-transform active:scale-95 shadow-[0_0_15px_rgba(220,38,38,0.3)]"
             >
               <LogIn className="w-3.5 h-3.5" />
-              <span>MASUK GOOGLE</span>
+              <span>MASUK<span className="hidden min-[370px]:inline"> GOOGLE</span></span>
             </button>
           )}
 
@@ -152,7 +152,7 @@ export default function Navbar({
           <button
             onClick={openDrawer}
             className="p-2 bg-surface-card border border-surface-border rounded hover:border-red-600 transition-colors text-zinc-300 hover:text-white flex items-center gap-1.5"
-            aria-label="Open Navigation Drawer"
+            aria-label="Buka menu navigasi"
           >
             <Menu className="w-5 h-5" />
             <span className="text-xs font-mono-code hidden sm:inline">MENU</span>
