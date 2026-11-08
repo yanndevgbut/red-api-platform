@@ -29,6 +29,19 @@ export default function Home() {
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (session && session.user) {
+        // Try internal route handler (bypasses RLS)
+        try {
+          const res = await fetch(`/api/user?userId=${session.user.id}`);
+          if (res.ok) {
+            const json = await res.json();
+            if (json.profile) setUser(json.profile as Profile);
+            if (json.apiKey) setApiKey(json.apiKey as ApiKey);
+            if (json.profile && json.apiKey) return;
+          }
+        } catch (apiErr) {
+          console.warn("Internal user API fetch failed, falling back to direct Supabase:", apiErr);
+        }
+
         // Load profile from Supabase
         const { data: prof } = await supabase
           .from("profiles")

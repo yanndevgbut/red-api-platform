@@ -22,6 +22,23 @@ export default function DocsAccordion() {
 
   useEffect(() => {
     async function loadEndpoints() {
+      setLoading(true);
+      try {
+        const res = await fetch("/api/endpoints");
+        if (res.ok) {
+          const list = await res.json();
+          if (Array.isArray(list) && list.length > 0) {
+            setEndpoints(list as Endpoint[]);
+            setActiveOpenId(list[0].id);
+            setLoading(false);
+            return;
+          }
+        }
+      } catch (err) {
+        console.warn("Failed to load via /api/endpoints, falling back to direct Supabase:", err);
+      }
+
+      // Fallback direct supabase query
       const { data, error } = await supabase
         .from("endpoints")
         .select("*")
@@ -30,7 +47,6 @@ export default function DocsAccordion() {
 
       if (data && !error) {
         setEndpoints(data as Endpoint[]);
-        // Set default open on first endpoint
         if (data.length > 0) setActiveOpenId(data[0].id);
       }
       setLoading(false);
