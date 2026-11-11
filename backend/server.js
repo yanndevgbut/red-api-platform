@@ -7,11 +7,6 @@ const requestLogger = require('./middleware/logger');
 
 // Route Handlers
 const systemRouter = require('./routes/system');
-const aiRouter = require('./routes/ai');
-const downloaderRouter = require('./routes/downloader');
-const stalkerRouter = require('./routes/stalker');
-const toolsRouter = require('./routes/tools');
-const whatsappRouter = require('./routes/whatsapp');
 const adminRouter = require('./routes/admin');
 
 const app = express();
@@ -44,17 +39,12 @@ app.get('/', (req, res) => {
     name: 'RED/API Backend Engine',
     version: '2.4.1',
     status: 'running',
-    endpoints_count: 7
+    endpoints_count: 0
   });
 });
 
 // Mount Routes
 app.use('/api/system', systemRouter);
-app.use('/api/ai', aiRouter);
-app.use('/api/download', downloaderRouter);
-app.use('/api/stalk', stalkerRouter);
-app.use('/api/tools', toolsRouter);
-app.use('/api/whatsapp', whatsappRouter);
 app.use('/api/admin', adminRouter);
 
 // 404 Fallback

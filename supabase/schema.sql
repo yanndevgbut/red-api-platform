@@ -248,16 +248,7 @@ DROP POLICY IF EXISTS "Admin update system settings" ON public.system_settings;
 CREATE POLICY "Admin update system settings" ON public.system_settings
   FOR UPDATE USING (public.is_admin());
 
--- 12. STARTER SEED DATA
-INSERT INTO public.endpoints (name, category, method, path, description, min_plan, status, params) VALUES
-('Gemini AI Conversational Chat', 'AI Services', 'GET', '/api/ai/chat', 'Demo respons percakapan Gemini.', 'free', 'active', '[{"name":"prompt","type":"string","required":true,"default":"Halo siapa kamu?"}]'),
-('ChatGPT Turbo Multi-turn', 'AI Services', 'POST', '/api/ai/gpt', 'Demo respons teks bergaya GPT.', 'vip', 'active', '[{"name":"prompt","type":"string","required":true,"default":"Buatkan skrip bot"},{"name":"model","type":"string","required":false,"default":"gpt-4o-mini"}]'),
-('TikTok Video & Audio Downloader', 'Downloader', 'GET', '/api/download/tiktok', 'Unduh video TikTok HD tanpa watermark dan audio MP3 asli.', 'free', 'active', '[{"name":"url","type":"string","required":true,"default":"https://www.tiktok.com/@putra.awe0/video/7705584998664965396"}]'),
-('Instagram Post & Reels Grabber', 'Downloader', 'GET', '/api/download/instagram', 'Demo respons unduhan Instagram.', 'basic', 'active', '[{"name":"url","type":"string","required":true,"default":"https://www.instagram.com/p/DF123xyz/"}]'),
-('Mobile Legends Stalker Info', 'Stalker', 'GET', '/api/stalk/ml', 'Demo respons profil Mobile Legends.', 'free', 'active', '[{"name":"userId","type":"string","required":true,"default":"12345678"},{"name":"zoneId","type":"string","required":true,"default":"2024"}]'),
-('Full Website Screenshot (SSWeb)', 'Tools', 'GET', '/api/tools/ssweb', 'Tautan screenshot viewport via Thum.io.', 'vip', 'active', '[{"name":"url","type":"string","required":true,"default":"https://google.com"}]'),
-('WhatsApp Newsletter & Channel Info', 'WhatsApp', 'GET', '/api/whatsapp/chinfo', 'Demo respons informasi channel WhatsApp.', 'vip', 'active', '[{"name":"channelUrl","type":"string","required":true,"default":"https://whatsapp.com/channel/0029Vb..."}]')
-ON CONFLICT (path) DO NOTHING;
+-- Feature endpoints are registered explicitly; retired beta routes are not seeded.
 
 REVOKE EXECUTE ON FUNCTION public.deduct_user_quota(text) FROM PUBLIC, anon, authenticated;
 REVOKE EXECUTE ON FUNCTION public.reset_daily_limits() FROM PUBLIC, anon, authenticated;

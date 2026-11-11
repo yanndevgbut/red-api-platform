@@ -23,7 +23,7 @@ npm run dev
 
 Kuota dihitung menurut tanggal Asia/Jakarta saat request pertama pada hari baru. Untuk memperbarui saldo dashboard pada tengah malam sebelum request pertama, aktifkan Supabase Cron dan jadwalkan `SELECT public.reset_daily_limits();` pada pukul 17.00 UTC setiap hari (00.00 WIB).
 
-Kirim API key melalui header `x-api-key`. Node masih menerima parameter `apikey` untuk klien lama. Endpoint AI, Instagram, Mobile Legends, dan WhatsApp mengembalikan data simulasi. TikTok dan screenshot bergantung pada layanan pihak ketiga.
+Kirim API key melalui header `x-api-key`. Node masih menerima parameter `apikey` untuk klien lama. Ketujuh endpoint beta (AI chat/GPT, TikTok, Instagram, Mobile Legends, SSWeb, WhatsApp Channel) telah dihapus dari backend dan seed database. Migrasi `20261112000000_remove_beta_endpoints.sql` membersihkan registrasinya pada database yang sudah ada. Health, statistik, dan route administrasi tetap tersedia.
 
 
 ## Statistik panel dan penanganan loading
