@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
+import PageLoading from "@/components/PageLoading";
 import Navbar from "@/components/Navbar";
 import Drawer from "@/components/Drawer";
 import MaintenanceBanner from "@/components/MaintenanceBanner";
@@ -29,19 +30,35 @@ export default function Platform({ initialTab = "landing", adminSection }: { ini
   const [session, setSession] = useState<Session | null>(null);
   const [refresh, setRefresh] = useState(0);
   const [accountError, setAccountError] = useState("");
+  const [authResolved, setAuthResolved] = useState(false);
+  const [authIssue, setAuthIssue] = useState("");
 
   useEffect(() => {
     const tab = new URLSearchParams(window.location.search).get("tab");
     if (tab && ["landing", "docs", "profile", "pricing", "admin"].includes(tab)) setActiveTab(tab);
 
+    let disposed = false;
+    const timeout = setTimeout(() => {
+      if (!disposed) {
+        setAuthIssue("Pemeriksaan sesi melewati batas waktu. Silakan coba lagi.");
+        setAuthResolved(true);
+      }
+    }, 10000);
     try {
       const { data: { subscription } } = getSupabase().auth.onAuthStateChange((_event, nextSession) => {
+        if (disposed) return;
+        clearTimeout(timeout);
+        setAuthIssue("");
         setSession(nextSession);
+        setAuthResolved(true);
       });
-      return () => subscription.unsubscribe();
+      return () => { disposed = true; clearTimeout(timeout); subscription.unsubscribe(); };
     } catch {
-      setAccountError("Layanan akun belum dikonfigurasi.");
+      clearTimeout(timeout);
+      setAuthIssue("Layanan akun belum tersedia. Silakan coba lagi.");
+      setAuthResolved(true);
     }
+    return () => { disposed = true; clearTimeout(timeout); };
   }, []);
 
   useEffect(() => {
@@ -119,6 +136,21 @@ export default function Platform({ initialTab = "landing", adminSection }: { ini
       if (adminSection) router.replace("/");
     }
   };
+
+  // A missing profile is not evidence that the visitor is signed out.
+  if (!authResolved || (session && !currentUser && !accountError)) {
+    return <PageLoading message={!authResolved ? "Memeriksa sesi akun..." : "Memuat data akun..."} />;
+  }
+  if (authIssue || (session && !currentUser && accountError)) {
+    return <div className="mx-auto flex min-h-[70dvh] max-w-md flex-col items-center justify-center gap-4 p-6 text-center">
+      <h1 className="font-bebas text-3xl text-white">Akun belum dapat dimuat</h1>
+      <p role="alert" className="text-sm text-zinc-400">{authIssue || accountError}</p>
+      <div className="flex flex-wrap justify-center gap-3">
+        <button type="button" onClick={() => { if (authIssue) window.location.reload(); else setRefresh(value => value + 1); }} className="rounded-lg bg-red-600 px-4 py-2 text-sm text-white">Coba lagi</button>
+        {session && <button type="button" onClick={handleLogout} className="rounded-lg border border-surface-border px-4 py-2 text-sm text-zinc-300">Keluar akun</button>}
+      </div>
+    </div>;
+  }
 
   return (
     <>

@@ -7,6 +7,7 @@ const requestLogger = require('./middleware/logger');
 
 // Route Handlers
 const systemRouter = require('./routes/system');
+const categoriesRouter = require('./routes/categories');
 const adminRouter = require('./routes/admin');
 
 const app = express();
@@ -31,6 +32,7 @@ app.get('/health', (req, res) => {
 app.use(express.json({ limit: '16kb' }));
 app.use(express.urlencoded({ extended: false, limit: '16kb' }));
 app.use(requestLogger);
+app.use('/api', categoriesRouter);
 app.use(checkMaintenance);
 
 // Root Info

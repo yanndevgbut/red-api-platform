@@ -19,6 +19,8 @@ export default function DocsAccordion({ defaultKey }: { defaultKey?: string }) {
   const [loadingReq, setLoadingReq] = useState<{ [key: number]: boolean }>({});
   const [copiedId, setCopiedId] = useState<number | null>(null);
 
+  const [categories, setCategories] = useState<string[]>(["ALL"]);
+  const [categoryError, setCategoryError] = useState("");
   const [catalogError, setCatalogError] = useState("");
 
   useEffect(() => {
@@ -36,11 +38,16 @@ export default function DocsAccordion({ defaultKey }: { defaultKey?: string }) {
         if (!controller.signal.aborted) setLoading(false);
       }
     }
+    void fetch("/api/categories", { signal: AbortSignal.any([controller.signal, AbortSignal.timeout(10000)]), cache: "no-store" })
+      .then(async response => {
+        if (!response.ok) throw new Error("Categories unavailable");
+        const data = await response.json();
+        if (!controller.signal.aborted) setCategories(["ALL", ...data.categories]);
+      }).catch(() => { if (!controller.signal.aborted) setCategoryError("Kategori belum dapat dimuat. Filter ALL tetap tersedia."); });
     void loadEndpoints();
     return () => controller.abort();
   }, []);
 
-  const categories = ["ALL", "AI Services", "Downloader", "Stalker", "Tools", "WhatsApp"];
 
   const filteredEndpoints = endpoints.filter((ep) => {
     const matchCat = selectedCat === "ALL" || ep.category === selectedCat;
@@ -169,6 +176,7 @@ export default function DocsAccordion({ defaultKey }: { defaultKey?: string }) {
         </div>
       </div>
 
+      {categoryError && <p role="status" className="text-xs text-zinc-400">{categoryError}</p>}
       {/* Category Pills */}
       <div role="group" aria-label="Kategori endpoint" className="flex w-full min-w-0 flex-nowrap gap-2 overflow-x-auto overscroll-x-contain pb-3 pt-1 snap-x snap-proximity">
         {categories.map((cat) => (

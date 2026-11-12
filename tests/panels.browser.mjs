@@ -42,10 +42,15 @@ try {
   await stalled.close();
 
   const admin = await pageFor();
+  let categoryNames = [];
+  await admin.route('**/api/categories', async route => {
+    if (route.request().method() === 'POST') categoryNames.push(route.request().postDataJSON().name);
+    await route.fulfill({ status: route.request().method() === 'POST' ? 201 : 200, json: { categories: categoryNames } });
+  });
   await admin.addInitScript(({ profile }) => {
     localStorage.setItem('sb-test-project-auth-token', JSON.stringify({ access_token: 'test-token', refresh_token: 'test-refresh', expires_at: Math.floor(Date.now() / 1000) + 3600, token_type: 'bearer', user: { id: profile.id, email: profile.email, app_metadata: {}, user_metadata: {}, aud: 'authenticated', created_at: new Date().toISOString() } }));
   }, { profile });
-  await admin.route('**/api/user', route => route.fulfill({ json: { profile, apiKey: null } }));
+  await admin.route('**/api/user', async route => { await new Promise(resolve => setTimeout(resolve, 900)); await route.fulfill({ json: { profile, apiKey: null } }); });
   let deny = true;
   await admin.route('https://test-project.supabase.co/rest/v1/**', route => {
     if (deny) return route.fulfill({ status: 500, json: { code: '42P17', message: 'policy recursion' } });
@@ -54,6 +59,10 @@ try {
     return route.fulfill({ json: data });
   });
   await admin.goto(baseURL + '/?tab=admin');
+  await admin.getByText('Memuat data akun...', { exact: true }).waitFor();
+  assert.equal(await admin.getByRole('button', { name: 'MASUK GOOGLE', exact: true }).count(), 0);
+  assert.equal(await admin.getByText('ADMIN CONSOLE TERKUNCI', { exact: true }).count(), 0);
+  console.log('PASS pending account shows loading instead of signed-out UI');
   await admin.getByText('Data tidak dapat diperbarui.', { exact: false }).waitFor();
   deny = false;
   await admin.getByRole('button', { name: 'Coba lagi / Refresh' }).click();
@@ -69,7 +78,7 @@ try {
   await menu().waitFor({ state: 'hidden' });
   assert.equal(await admin.getByRole('button', { name: 'Buka menu admin' }).evaluate(el => el === document.activeElement), true, 'focus returns to menu trigger');
   const sections = [
-    ['new-endpoint', 'Tambah Endpoint'], ['users', 'Manajemen Pengguna'],
+    ['new-endpoint', 'Tambah Endpoint'], ['categories', 'Kategori'], ['users', 'Manajemen Pengguna'],
     ['logs', 'Log Akses'], ['settings', 'Pengaturan Sistem'], ['endpoints', 'Endpoint Registry'],
   ];
   for (const [id, title] of sections) {
@@ -83,6 +92,11 @@ try {
       assert.equal(await admin.evaluate(() => document.documentElement.scrollWidth > innerWidth), false, `admin ${id} overflow at ${width}px`);
     }
     if (id === 'new-endpoint') assert.equal(await admin.locator('form').count(), 1);
+    if (id === 'categories') {
+      await admin.getByLabel('Nama kategori', { exact: true }).fill('Utilities');
+      await admin.getByRole('button', { name: 'Tambah kategori', exact: true }).click();
+      await admin.getByText('Kategori berhasil ditambahkan.', { exact: true }).waitFor();
+    }
     if (id !== 'settings') assert.equal(await admin.getByText('MAINTENANCE MODE', { exact: true }).count(), 0);
   }
   await admin.goBack();
@@ -94,16 +108,27 @@ try {
   await admin.goto(baseURL + '/?tab=docs');
   const categories = admin.getByRole('group', { name: 'Kategori endpoint' });
   await categories.waitFor();
+  await categories.getByRole('button', { name: 'UTILITIES', exact: true }).waitFor();
+  assert.equal(await categories.getByRole('button').count(), 2, 'ALL plus the category created in admin');
+  assert.equal(await categories.getByRole('button', { name: 'WHATSAPP', exact: true }).count(), 0, 'beta categories are gone');
+  categoryNames = ['Utilities', 'Social Media', 'Media Downloads', 'Other'];
+  await admin.reload();
+  await categories.getByRole('button', { name: 'OTHER', exact: true }).waitFor();
   await admin.setViewportSize({ width: 320, height: 850 });
   assert.equal(await categories.evaluate(el => el.scrollWidth > el.clientWidth), true, 'categories scroll horizontally');
   const rows = await categories.getByRole('button').evaluateAll(buttons => buttons.map(button => Math.round(button.getBoundingClientRect().top)));
   assert.equal(new Set(rows).size, 1, 'category buttons stay on one row');
-  const whatsapp = categories.getByRole('button', { name: 'WHATSAPP', exact: true });
-  await whatsapp.focus();
+  const lastCategory = categories.getByRole('button', { name: 'OTHER', exact: true });
+  await lastCategory.focus();
   await admin.keyboard.press('Enter');
-  assert.equal(await whatsapp.getAttribute('aria-pressed'), 'true');
+  assert.equal(await lastCategory.getAttribute('aria-pressed'), 'true');
   assert.equal(await categories.evaluate(el => el.scrollLeft > 0), true);
   assert.equal(await admin.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
+  categoryNames = [];
+  await admin.reload();
+  await categories.waitFor();
+  await admin.waitForTimeout(150);
+  assert.equal(await categories.getByRole('button').count(), 1, 'empty category store shows only ALL');
   assert.equal((await admin.title()).includes('RED API'), true);
   assert.equal((await admin.locator('body').innerText()).includes('RED/API'), false);
   console.log('PASS admin pages, slide menu, Escape, focus, history, reload, category scrolling and RED API branding');

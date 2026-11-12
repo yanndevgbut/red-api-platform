@@ -12,10 +12,11 @@ import EndpointEditor, { type EndpointDraft } from "@/components/admin/EndpointE
 import EndpointRegistry from "@/components/admin/EndpointRegistry";
 import UserManagement from "@/components/admin/UserManagement";
 import AccessLogs from "@/components/admin/AccessLogs";
+import CategoryManager from "@/components/admin/CategoryManager";
 import SystemSettings from "@/components/admin/SystemSettings";
 import { RefreshCw } from "lucide-react";
 
-type AdminSnapshot = { endpoints?: Endpoint[]; users?: Profile[]; logs?: ApiLog[]; maintenance?: boolean };
+type AdminSnapshot = { endpoints?: Endpoint[]; users?: Profile[]; logs?: ApiLog[]; maintenance?: boolean; categories?: string[] };
 
 export default function AdminConsole({ section }: { section: AdminSection }) {
   const router = useRouter();
@@ -23,12 +24,13 @@ export default function AdminConsole({ section }: { section: AdminSection }) {
   const [endpoints, setEndpoints] = useState<Endpoint[]>([]);
   const [users, setUsers] = useState<Profile[]>([]);
   const [logs, setLogs] = useState<ApiLog[]>([]);
+  const [categories, setCategories] = useState<string[]>([]);
   const [maintenance, setMaintenance] = useState(false);
 
   // New endpoint form state
   const [newEp, setNewEp] = useState<EndpointDraft>({
     name: "",
-    category: "AI Services",
+    category: "",
     method: "GET" as const,
     min_plan: "free" as const,
     path: "",
@@ -37,7 +39,12 @@ export default function AdminConsole({ section }: { section: AdminSection }) {
 
   const fetchData = useCallback(async (signal: AbortSignal): Promise<AdminSnapshot> => {
     const client = getSupabase();
-    if (section === "new-endpoint") return {};
+    if (section === "new-endpoint" || section === "categories") {
+      const response = await fetch("/api/categories", { signal, cache: "no-store" });
+      if (!response.ok) throw new Error("Categories unavailable");
+      const { categories } = await response.json();
+      return { categories };
+    }
     if (section === "endpoints") {
       const { data, error } = await client.from("endpoints").select("*").order("id").abortSignal(signal);
       if (error) throw error;
@@ -62,6 +69,7 @@ export default function AdminConsole({ section }: { section: AdminSection }) {
   // Preserve the last successful snapshot if a later refresh fails.
   React.useEffect(() => {
     if (!data) return;
+    if (data.categories) setCategories(data.categories);
     if (data.endpoints) setEndpoints(data.endpoints);
     if (data.users) setUsers(data.users);
     if (data.logs) setLogs(data.logs);
@@ -91,7 +99,7 @@ export default function AdminConsole({ section }: { section: AdminSection }) {
 
   const addEndpoint = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newEp.name.trim() || !isFeaturePath(newEp.path.trim())) {
+    if (!categories.includes(newEp.category) || !newEp.name.trim() || !isFeaturePath(newEp.path.trim())) {
       alert("Isi nama dan path API yang valid, misalnya /api/download/tiktok.");
       return;
     }
@@ -113,7 +121,7 @@ export default function AdminConsole({ section }: { section: AdminSection }) {
       alert("Endpoint berhasil ditambahkan ke Supabase registry!");
       setNewEp({
         name: "",
-        category: "AI Services",
+        category: "",
         method: "GET",
         min_plan: "free",
         path: "",
@@ -168,7 +176,7 @@ export default function AdminConsole({ section }: { section: AdminSection }) {
           <p className="text-xs leading-relaxed text-zinc-400">{current.description}</p>
         </div>
       </header>
-      {section !== "new-endpoint" && <div role="status" className="flex flex-wrap items-center justify-between gap-3 text-xs font-mono-code text-zinc-400">
+      {<div role="status" className="flex flex-wrap items-center justify-between gap-3 text-xs font-mono-code text-zinc-400">
         <span>{loading ? "Memuat data panel..." : error || (refreshing ? "Memperbarui data..." : `Data panel tersinkronisasi.${section === "users" ? " Maksimal 200 akun terbaru." : ""}`)}</span>
         <button type="button" onClick={loadData} disabled={refreshing} className="inline-flex items-center gap-2 rounded-lg border border-surface-border px-3 py-2 disabled:opacity-50">
           <RefreshCw className={`h-3 w-3 ${refreshing ? "animate-spin" : ""}`} /> Coba lagi / Refresh
@@ -176,7 +184,8 @@ export default function AdminConsole({ section }: { section: AdminSection }) {
       </div>}
       <section key={section} aria-label={current.title} className="min-w-0 animate-fade-in">
         {section === "endpoints" && <EndpointRegistry endpoints={endpoints} deleteEndpoint={deleteEndpoint} />}
-        {section === "new-endpoint" && <EndpointEditor newEp={newEp} setNewEp={setNewEp} addEndpoint={addEndpoint} />}
+        {section === "new-endpoint" && <EndpointEditor categories={categories} newEp={newEp} setNewEp={setNewEp} addEndpoint={addEndpoint} />}
+        {section === "categories" && <CategoryManager categories={categories} onCreated={names => { setCategories(names); loadData(); }} />}
         {section === "users" && <UserManagement users={users} updateUserRole={updateUserRole} updateUserPlan={updateUserPlan} toggleBanUser={toggleBanUser} />}
         {section === "logs" && <AccessLogs logs={logs} />}
         {section === "settings" && <SystemSettings maintenance={maintenance} disabled={data?.maintenance === undefined} toggleMaintenance={toggleMaintenance} />}

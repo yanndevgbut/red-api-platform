@@ -38,3 +38,6 @@ node_modules/
 .env.*
 !.env.example
 secret.txt
+
+# Persistent category data is managed by the backend, not Git.
+/backend/data/

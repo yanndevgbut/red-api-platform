@@ -65,3 +65,14 @@ Uji browser memakai data provider tiruan untuk memeriksa error, timeout, retry, 
 ## Halaman admin
 
 Admin menggunakan URL terpisah: `/admin/endpoints` (registry), `/admin/new-endpoint` (form pendaftaran), `/admin/users`, `/admin/logs`, dan `/admin/settings` (maintenance). `/admin` serta navigasi admin lama diarahkan ke registry. Gunakan menu hamburger di judul halaman untuk berpindah fitur. Setiap halaman tetap memerlukan profil administrator aktif; akses data dan perubahan tetap dibatasi policy Supabase. Sidebar menggunakan dialog modal, animasi slide, dukungan Escape/fokus keyboard, serta preferensi reduced motion.
+
+
+## Kategori katalog
+
+Kategori beta bawaan dihapus. DOCS & TESTER selalu memiliki filter `ALL`; kategori tambahan dibuat melalui `/admin/categories` oleh akun administrator aktif, lalu dapat dipilih pada form endpoint. Nama `ALL` dicadangkan, panjang nama dibatasi 60 karakter, dan duplikat tidak membedakan huruf besar/kecil.
+
+Frontend memakai `/api/categories`, yang meneruskan request ke `API_BACKEND_URL`: backend menyediakan `GET /api/system/categories` dan `POST /api/admin/categories`. Penambahan kategori memakai Bearer token sesi Supabase dan memverifikasi role serta status banned pada backend; tidak memakai API key pengguna sebagai pengganti sesi.
+
+Daftar kategori disimpan secara atomik di `backend/data/categories.json` (direktori `data/` pada panel). File dibuat saat kategori pertama ditambahkan. Pertahankan dan backup direktori ini saat redeploy backend; jangan menimpanya dengan data kosong dari Git. Jika perlu, tentukan lokasi persisten lain melalui `CATEGORIES_FILE`. Deploy `backend/routes/categories.js` dan mounting router di `backend/server.js` sebelum frontend baru.
+
+Saat sesi atau profil masih diperiksa, halaman menampilkan indikator loading. Timeout dan kegagalan pemeriksaan akun memiliki tampilan error/retry tersendiri sehingga pengguna tidak ditampilkan sebagai belum login sebelum statusnya diketahui.
