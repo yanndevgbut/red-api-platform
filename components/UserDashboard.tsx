@@ -180,7 +180,7 @@ export default function UserDashboard({ user, apiKey, onRefresh }: UserDashboard
           <div className="bg-black/60 border border-surface-border rounded p-3 text-xs font-mono-code text-zinc-400 space-y-1">
             <span className="text-red-400 font-bold">EXAMPLE USAGE:</span>
             <div className="text-[11px] text-zinc-300 select-all break-all">
-              curl -H &quot;x-api-key: YOUR_KEY&quot; &quot;https://YOUR_SITE/api/proxy/api/ai/chat?prompt=halo&quot;
+              curl -H &quot;x-api-key: YOUR_KEY&quot; &quot;https://api.redapi.my.id/api/download/tiktok?url=https://vt.tiktok.com/ZS9ChQ9WD/&quot;
             </div>
           </div>
         </div>

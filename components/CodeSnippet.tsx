@@ -7,7 +7,7 @@ export default function CodeSnippet() {
   const [tab, setTab] = useState<"curl" | "node" | "python">("curl");
   const [copied, setCopied] = useState(false);
 
-  const endpoint = "https://YOUR_SITE/api/proxy/api/ai/chat?prompt=halo";
+  const endpoint = "https://api.redapi.my.id/api/download/tiktok?url=https://vt.tiktok.com/ZS9ChQ9WD/";
   const snippets = {
     curl: `curl -H "x-api-key: YOUR_KEY" \\
   "${endpoint}"`,
