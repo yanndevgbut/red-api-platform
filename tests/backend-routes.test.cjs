@@ -10,17 +10,19 @@ for (const path of ['../backend/middleware/logger', '../backend/middleware/maint
 }
 const app = require('../backend/server');
 
-test('retired endpoints return 404 without affecting health or system stats', async () => {
+test('retired endpoints remain removed and TikTok requires valid input and authentication', async () => {
   const server = app.listen(0, '127.0.0.1');
   await new Promise(resolve => server.once('listening', resolve));
   const base = `http://127.0.0.1:${server.address().port}`;
   try {
     assert.equal((await fetch(base + '/health')).status, 200);
     assert.equal((await fetch(base + '/api/system/stats')).status, 200);
-    assert.equal((await (await fetch(base + '/')).json()).endpoints_count, 0);
+    assert.equal((await (await fetch(base + '/')).json()).endpoints_count, 1);
+    assert.equal((await fetch(base + '/api/download/tiktok')).status, 400);
+    assert.equal((await fetch(base + '/api/download/tiktok?url=https://example.com')).status, 400);
+    assert.equal((await fetch(base + '/api/download/tiktok?url=https://vt.tiktok.com/test')).status, 401);
     for (const [method, path] of [
       ['GET', '/api/ai/chat?prompt=test'], ['POST', '/api/ai/gpt'],
-      ['GET', '/api/download/tiktok?url=https://www.tiktok.com/test'],
       ['GET', '/api/download/instagram?url=https://www.instagram.com/p/test'],
       ['GET', '/api/stalk/ml?userId=123&zoneId=123'],
       ['GET', '/api/tools/ssweb?url=https://example.com'],

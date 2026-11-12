@@ -52,5 +52,12 @@ test('migrations: registry authorization, account isolation, rotation and signup
   await db.exec(`RESET ROLE; UPDATE profiles SET banned=true WHERE id='${admin}'; SET ROLE authenticated;`);
   assert.equal((await db.query('SELECT id FROM profiles')).rows.length, 1, 'banned admin loses broad access');
   await assert.rejects(db.exec('SELECT rotate_my_api_key()'), /active account/);
+  await db.exec('RESET ROLE');
+  const tiktokMigration = await readFile(new URL('../supabase/migrations/20261112030000_add_tiktokio_endpoint.sql', import.meta.url), 'utf8');
+  await db.exec(tiktokMigration);
+  await db.exec(tiktokMigration);
+  const registered = (await db.query("SELECT method, category, status FROM endpoints WHERE path='/api/download/tiktok'")).rows;
+  assert.deepEqual(registered, [{ method: 'GET', category: 'Downloader', status: 'active' }], 'TikTok registration can be reapplied without duplicating entries');
+  assert.equal((await db.query("SELECT id FROM endpoints WHERE path IN ('/api/ai/chat', '/api/download/instagram')")).rows.length, 0, 'other retired endpoints remain removed');
   await db.close();
 });

@@ -76,3 +76,18 @@ Frontend memakai `/api/categories`, yang meneruskan request ke `API_BACKEND_URL`
 Daftar kategori disimpan secara atomik di `backend/data/categories.json` (direktori `data/` pada panel). File dibuat saat kategori pertama ditambahkan. Pertahankan dan backup direktori ini saat redeploy backend; jangan menimpanya dengan data kosong dari Git. Jika perlu, tentukan lokasi persisten lain melalui `CATEGORIES_FILE`. Deploy `backend/routes/categories.js` dan mounting router di `backend/server.js` sebelum frontend baru.
 
 Saat sesi atau profil masih diperiksa, halaman menampilkan indikator loading. Timeout dan kegagalan pemeriksaan akun memiliki tampilan error/retry tersendiri sehingga pengguna tidak ditampilkan sebagai belum login sebelum statusnya diketahui.
+
+
+## TikTok Downloader (TikTokio)
+
+Endpoint `GET /api/download/tiktok?url=...` kini aktif menggunakan TikTokio. Header `x-api-key` wajib diisi. URL harus HTTPS dan berasal dari domain TikTok; input tidak valid ditolak sebelum middleware kuota. Scraper mengambil sesi, meneruskan cookie tanpa atribut `Set-Cookie`, lalu mengirim JSON `vid` dan `prefix` seperti scraper referensi. Implementasi memakai `fetch` bawaan Node.js dan Cheerio yang sudah terpasang sehingga tidak memerlukan Axios.
+
+Respons `result` berisi `status`, `title`, `thumbnail`, serta `links` berupa pasangan `type` dan `link`. Link bersifat sementara dan bergantung pada ketersediaan video serta layanan TikTokio. Respons tanpa tautan unduhan tidak dianggap sukses; kegagalan provider menghasilkan `502`, timeout menghasilkan `504`. Timeout provider 15 detik dan ukuran HTML maksimum 2 MiB.
+
+Jalankan `npm ci --omit=dev` di backend untuk memastikan Cheerio 1.2.0 terpasang. Deploy `backend/lib/tiktokio.js`, `backend/routes/downloader.js`, dan mounting router download pada server. Terapkan `supabase/migrations/20261112030000_add_tiktokio_endpoint.sql` untuk pendaftaran katalog, serta tambahkan kategori `Downloader` melalui admin jika memakai instalasi baru. Hanya TikTok yang diaktifkan kembali; endpoint beta lain tetap dihapus.
+
+```sh
+curl -H "x-api-key: YOUR_KEY" --get \
+  --data-urlencode "url=https://vt.tiktok.com/ZS9ChQ9WD/" \
+  "https://red-api-platform.vercel.app/api/proxy/api/download/tiktok"
+```

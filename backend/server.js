@@ -7,6 +7,7 @@ const requestLogger = require('./middleware/logger');
 
 // Route Handlers
 const systemRouter = require('./routes/system');
+const downloaderRouter = require('./routes/downloader');
 const categoriesRouter = require('./routes/categories');
 const adminRouter = require('./routes/admin');
 
@@ -41,12 +42,13 @@ app.get('/', (req, res) => {
     name: 'RED API Backend Engine',
     version: '2.4.1',
     status: 'running',
-    endpoints_count: 0
+    endpoints_count: 1
   });
 });
 
 // Mount Routes
 app.use('/api/system', systemRouter);
+app.use('/api/download', downloaderRouter);
 app.use('/api/admin', adminRouter);
 
 // 404 Fallback
