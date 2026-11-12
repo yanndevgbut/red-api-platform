@@ -12,7 +12,7 @@ import UserDashboard from "@/components/UserDashboard";
 import AdminConsole from "@/components/AdminConsole";
 import AuthModal from "@/components/AuthModal";
 import { Profile, ApiKey } from "@/types";
-import { ArrowRight, Braces, Lock, LogIn } from "lucide-react";
+import { ArrowRight, Lock, LogIn } from "lucide-react";
 import { getSupabase } from "@/lib/supabase";
 import type { Session } from "@supabase/supabase-js";
 
@@ -158,10 +158,6 @@ export default function Home() {
             <div className="hero-panel relative rounded-2xl border border-surface-border p-4 sm:p-8 lg:p-12">
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
                 <div className="min-w-0 lg:col-span-7 space-y-5 sm:space-y-6">
-                  <div className="hero-kicker inline-flex max-w-full items-center gap-2 rounded-full border border-red-800/80 bg-red-950/35 px-3 py-1.5 font-mono-code text-[10px] tracking-widest text-red-200">
-                    <Braces aria-hidden="true" className="h-3.5 w-3.5 shrink-0 text-red-400" />
-                    RED/API · DEVELOPER GATEWAY
-                  </div>
                   <h1 className="hero-title font-bebas tracking-tight text-white">
                     FAST, RELIABLE <br />
                     <span className="text-red-400">REST API PLATFORM</span> <br />
