@@ -10,7 +10,7 @@ export default function DocsAccordion({ defaultKey }: { defaultKey?: string }) {
   const [loading, setLoading] = useState(true);
   const [selectedCat, setSelectedCat] = useState("ALL");
   const [search, setSearch] = useState("");
-  const [activeOpenId, setActiveOpenId] = useState<number | null>(1);
+  const [activeOpenId, setActiveOpenId] = useState<number | null>(null);
 
   // Per-endpoint tester state
   const [apiKeys, setApiKeys] = useState<{ [key: number]: string }>({});
@@ -31,7 +31,6 @@ export default function DocsAccordion({ defaultKey }: { defaultKey?: string }) {
         if (!res.ok) throw new Error();
         const list: Endpoint[] = await res.json();
         setEndpoints(list);
-        setActiveOpenId(list[0]?.id ?? null);
       } catch {
         if (!controller.signal.aborted) setCatalogError("Katalog belum tersedia. Muat ulang halaman untuk mencoba lagi.");
       } finally {
