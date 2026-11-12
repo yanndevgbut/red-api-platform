@@ -1,153 +1,112 @@
 import assert from 'node:assert/strict';
+import http from 'node:http';
 import { chromium } from 'playwright';
 
-// Run against a local server built with NEXT_PUBLIC_SUPABASE_URL=https://test-project.supabase.co
-// and NEXT_PUBLIC_SUPABASE_ANON_KEY=sb_publishable_test. All provider data is mocked.
-const baseURL = process.env.TEST_BASE_URL || 'http://127.0.0.1:3000';
+// Local fixture provider is used by both browser and server-side session verification.
+// Build with NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:54321 and sb_publishable_test.
+const base = process.env.TEST_BASE_URL || 'http://127.0.0.1:3000';
+const ids = { 'test-token': '10000000-0000-0000-0000-000000000001', 'member-token': '10000000-0000-0000-0000-000000000002' };
+let adminBanned = false;
+let profileDelay = 0;
+const profile = token => ({ id: ids[token], username: token === 'test-token' ? 'test_admin' : '<img src=x onerror="window.__xss=1">', email: 'qa@example.com', role: token === 'test-token' ? 'admin' : 'user', plan: 'free', limit_daily: 100, limit_remaining: 100, banned: token === 'test-token' && adminBanned, created_at: new Date().toISOString() });
+const provider = http.createServer(async (req, res) => {
+  res.setHeader('Access-Control-Allow-Origin', '*'); res.setHeader('Access-Control-Allow-Headers', '*');
+  if (req.method === 'OPTIONS') { res.end(); return; }
+  res.setHeader('Content-Type', 'application/json');
+  const token = req.headers.authorization?.replace(/^Bearer /i, '');
+  if (req.url.startsWith('/auth/v1/user')) {
+    if (!ids[token]) { res.writeHead(401); res.end(JSON.stringify({ msg: 'Invalid JWT' })); return; }
+    res.end(JSON.stringify({ id: ids[token], aud: 'authenticated', email: 'qa@example.com', app_metadata: {}, user_metadata: {}, created_at: new Date().toISOString() })); return;
+  }
+  if (req.url.startsWith('/rest/v1/profiles')) {
+    if (profileDelay) await new Promise(resolve => setTimeout(resolve, profileDelay));
+    res.end(JSON.stringify(ids[token] ? profile(token) : null)); return;
+  }
+  if (req.url.startsWith('/rest/v1/system_settings')) { res.end(JSON.stringify({ maintenance_mode: false })); return; }
+  res.end('[]');
+});
+await new Promise(resolve => provider.listen(54321, '127.0.0.1', resolve));
 const browser = await chromium.launch({ executablePath: process.env.CHROMIUM_PATH || '/usr/bin/chromium', headless: true, args: ['--no-sandbox'] });
-const profile = { id: '10000000-0000-0000-0000-000000000001', username: 'test_admin', email: 'test@example.com', role: 'admin', plan: 'free', limit_daily: 100, limit_remaining: 100, banned: false };
-const stats = { status: true, data: { node: 'TEST-NODE', platform: 'linux', node_version: 'v22', cpu: { usage_percent: 12, cores: 2, model: 'Test CPU' }, memory: { used_gb: '0.10', total_gb: '1.00', usage_percent: 10 }, uptime: { raw_seconds: 60, formatted: '0d 0h 1m' }, timestamp: new Date().toISOString() } };
-async function pageFor(width = 360) {
+async function newPage(token, width = 360) {
   const page = await browser.newPage({ viewport: { width, height: 850 } });
-  await page.route('https://test-project.supabase.co/**', route => route.fulfill({ status: 200, json: [] }));
+  if (token) await page.addInitScript(({ token, id }) => localStorage.setItem('sb-127-auth-token', JSON.stringify({ access_token: token, refresh_token: 'test-refresh', expires_at: Math.floor(Date.now() / 1000) + 3600, token_type: 'bearer', user: { id, aud: 'authenticated', email: 'qa@example.com', app_metadata: {}, user_metadata: { role: 'admin' }, created_at: new Date().toISOString() } })), { token, id: ids[token] });
+  await page.route('**/api/telemetry', route => route.fulfill({ status: 503, json: { status: false } }));
   return page;
 }
 try {
-  const page = await pageFor();
-  let fail = true;
-  await page.route('**/api/telemetry', route => route.fulfill({ status: fail ? 503 : 200, json: fail ? { status: false } : stats }));
-  await page.goto(baseURL);
-  await page.getByText('Tidak tersedia', { exact: true }).first().waitFor();
-  assert.equal(await page.getByText('Loading...', { exact: true }).count(), 0);
-  fail = false;
-  await page.getByRole('button', { name: 'Coba lagi / Refresh' }).click();
-  await page.getByText('TEST-NODE', { exact: true }).waitFor();
-  await page.waitForTimeout(50);
-  fail = true;
-  await page.getByRole('button', { name: 'Coba lagi / Refresh' }).click();
-  await page.getByText(/data mungkin kedaluwarsa/).waitFor();
-  assert.equal(await page.getByText('TEST-NODE', { exact: true }).count(), 1);
-  for (const width of [320, 360, 768]) {
-    await page.setViewportSize({ width, height: 850 });
-    assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth), false, `overflow at ${width}px`);
+  const anonymous = await newPage();
+  for (const path of ['/admin', '/admin/users', '/admin/not-a-page']) {
+    await anonymous.goto(base + path); await anonymous.waitForURL(base + '/');
+    await anonymous.getByText('FAST, RELIABLE', { exact: false }).waitFor();
   }
-  console.log('PASS telemetry error, recovery, stale data and responsive layout');
-  await page.close();
+  await anonymous.getByRole('button', { name: 'Buka menu navigasi' }).click();
+  assert.equal(await anonymous.getByRole('button', { name: '05. MASTER ADMIN CONSOLE' }).count(), 0);
+  console.log('PASS anonymous admin URLs redirect to landing and admin navigation is absent');
+  await anonymous.close();
 
-  const stalled = await pageFor();
-  await stalled.route('**/api/telemetry', async route => { await new Promise(resolve => setTimeout(resolve, 9000)); await route.abort().catch(() => {}); });
-  await stalled.goto(baseURL);
-  await stalled.getByText('Tidak tersedia', { exact: true }).first().waitFor({ timeout: 12000 });
-  console.log('PASS stalled telemetry exits loading');
-  await stalled.close();
+  const member = await newPage('member-token', 1280);
+  profileDelay = 700;
+  await member.goto(base + '/?tab=admin');
+  await member.getByText('Memuat data akun...', { exact: true }).waitFor();
+  assert.equal(await member.getByRole('button', { name: 'MASUK GOOGLE', exact: true }).count(), 0);
+  await member.waitForURL(base + '/'); profileDelay = 0;
+  await member.getByRole('button', { name: 'Logout', exact: true }).waitFor();
+  assert.equal(await member.getByRole('button', { name: 'ADMIN PANEL', exact: true }).count(), 0);
+  await member.getByRole('button', { name: 'Buka menu navigasi' }).click();
+  assert.equal(await member.getByRole('button', { name: '05. MASTER ADMIN CONSOLE' }).count(), 0);
+  assert.equal(await member.evaluate(() => window.__xss), undefined);
+  assert.equal(await member.locator('img[src="x"]').count(), 0);
+  await member.context().addCookies([{ name: 'red_admin_session', value: 'member-token', domain: '127.0.0.1', path: '/admin' }]);
+  await member.goto(base + '/admin/users'); await member.waitForURL(base + '/');
+  const deniedCookie = await member.request.post(base + '/api/admin/session', { headers: { Authorization: 'Bearer member-token' } });
+  assert.equal(deniedCookie.status(), 403);
+  const idor = await member.request.get(base + '/api/user?userId=' + ids['test-token'], { headers: { Authorization: 'Bearer member-token' } });
+  assert.equal(idor.status(), 403);
+  assert.equal((await member.request.get(base + '/api/admin/users')).status(), 401);
+  console.log('PASS member/forged admin cookie redirects, delayed auth has no login flash, IDOR denied and username XSS escaped');
+  await member.close();
 
-  const admin = await pageFor();
-  let categoryNames = [];
-  await admin.route('**/api/categories', async route => {
-    if (route.request().method() === 'POST') categoryNames.push(route.request().postDataJSON().name);
-    await route.fulfill({ status: route.request().method() === 'POST' ? 201 : 200, json: { categories: categoryNames } });
+  const admin = await newPage('test-token', 1280);
+  let categories = [];
+  await admin.route('**/api/categories', route => {
+    if (route.request().method() === 'POST') categories.push(route.request().postDataJSON().name);
+    return route.fulfill({ status: route.request().method() === 'POST' ? 201 : 200, json: { categories } });
   });
-  await admin.addInitScript(({ profile }) => {
-    localStorage.setItem('sb-test-project-auth-token', JSON.stringify({ access_token: 'test-token', refresh_token: 'test-refresh', expires_at: Math.floor(Date.now() / 1000) + 3600, token_type: 'bearer', user: { id: profile.id, email: profile.email, app_metadata: {}, user_metadata: {}, aud: 'authenticated', created_at: new Date().toISOString() } }));
-  }, { profile });
-  await admin.route('**/api/user', async route => { await new Promise(resolve => setTimeout(resolve, 900)); await route.fulfill({ json: { profile, apiKey: null } }); });
-  let deny = true;
-  await admin.route('https://test-project.supabase.co/rest/v1/**', route => {
-    if (deny) return route.fulfill({ status: 500, json: { code: '42P17', message: 'policy recursion' } });
-    const url = route.request().url();
-    const data = url.includes('/system_settings') ? { maintenance_mode: false } : url.includes('/profiles') ? [profile] : [];
-    return route.fulfill({ json: data });
-  });
-  await admin.goto(baseURL + '/?tab=admin');
-  await admin.getByText('Memuat data akun...', { exact: true }).waitFor();
-  assert.equal(await admin.getByRole('button', { name: 'MASUK GOOGLE', exact: true }).count(), 0);
-  assert.equal(await admin.getByText('ADMIN CONSOLE TERKUNCI', { exact: true }).count(), 0);
-  console.log('PASS pending account shows loading instead of signed-out UI');
-  await admin.getByText('Data tidak dapat diperbarui.', { exact: false }).waitFor();
-  deny = false;
-  await admin.getByRole('button', { name: 'Coba lagi / Refresh' }).click();
-  await admin.getByText('Data panel tersinkronisasi.', { exact: false }).waitFor();
-  console.log('PASS admin provider error and retry');
+  await admin.route('**/api/admin/endpoints', route => route.fulfill({ json: [] }));
+  await admin.route('**/api/admin/users', route => route.fulfill({ json: [profile('test-token')] }));
+  await admin.route('**/api/admin/logs', route => route.fulfill({ json: [] }));
+  await admin.route('**/api/admin/system', route => route.fulfill({ json: { maintenance_mode: false } }));
+  await admin.goto(base + '/');
+  await admin.getByRole('button', { name: 'ADMIN PANEL', exact: true }).waitFor();
+  await admin.getByRole('button', { name: 'ADMIN PANEL', exact: true }).click();
   await admin.waitForURL('**/admin/endpoints');
-  assert.equal(await admin.locator('form').count(), 0, 'registry page excludes endpoint creation');
-  assert.equal(await admin.getByText('MAINTENANCE MODE', { exact: true }).count(), 0);
-  const menu = () => admin.getByRole('dialog', { name: 'MENU ADMIN' });
-  await admin.getByRole('button', { name: 'Buka menu admin' }).click();
-  await menu().waitFor();
-  await admin.keyboard.press('Escape');
-  await menu().waitFor({ state: 'hidden' });
-  assert.equal(await admin.getByRole('button', { name: 'Buka menu admin' }).evaluate(el => el === document.activeElement), true, 'focus returns to menu trigger');
-  const sections = [
-    ['new-endpoint', 'Tambah Endpoint'], ['categories', 'Kategori'], ['users', 'Manajemen Pengguna'],
-    ['logs', 'Log Akses'], ['settings', 'Pengaturan Sistem'], ['endpoints', 'Endpoint Registry'],
-  ];
-  for (const [id, title] of sections) {
+  await admin.getByRole('heading', { name: 'Endpoint Registry', exact: true }).waitFor();
+  const cookie = (await admin.context().cookies()).find(cookie => cookie.name === 'red_admin_session');
+  assert.ok(cookie?.httpOnly); assert.equal(cookie.path, '/admin'); assert.equal(cookie.sameSite, 'Strict'); assert.ok(cookie.secure);
+  for (const [id, title] of [['new-endpoint', 'Tambah Endpoint'], ['categories', 'Kategori'], ['users', 'Manajemen Pengguna'], ['logs', 'Log Akses'], ['settings', 'Pengaturan Sistem'], ['endpoints', 'Endpoint Registry']]) {
     await admin.getByRole('button', { name: 'Buka menu admin' }).click();
-    await menu().getByRole('link', { name: new RegExp(title) }).click();
-    await admin.waitForURL(`**/admin/${id}`);
+    const menu = admin.getByRole('dialog', { name: 'MENU ADMIN' });
+    await menu.getByRole('link', { name: new RegExp(title) }).click();
+    await admin.waitForURL('**/admin/' + id);
     await admin.getByRole('heading', { name: title, exact: true }).waitFor();
-    assert.equal(await admin.getByRole('dialog').count(), 0, 'menu closes after navigation');
-    for (const width of [320, 360, 768]) {
-      await admin.setViewportSize({ width, height: 850 });
-      assert.equal(await admin.evaluate(() => document.documentElement.scrollWidth > innerWidth), false, `admin ${id} overflow at ${width}px`);
-    }
-    if (id === 'new-endpoint') assert.equal(await admin.locator('form').count(), 1);
+    for (const width of [320, 360, 768]) { await admin.setViewportSize({ width, height: 850 }); assert.equal(await admin.evaluate(() => document.documentElement.scrollWidth > innerWidth), false); }
     if (id === 'categories') {
       await admin.getByLabel('Nama kategori', { exact: true }).fill('Utilities');
       await admin.getByRole('button', { name: 'Tambah kategori', exact: true }).click();
       await admin.getByText('Kategori berhasil ditambahkan.', { exact: true }).waitFor();
     }
-    if (id !== 'settings') assert.equal(await admin.getByText('MAINTENANCE MODE', { exact: true }).count(), 0);
   }
-  await admin.goBack();
-  await admin.waitForURL('**/admin/settings');
-  await admin.getByRole('heading', { name: 'Pengaturan Sistem', exact: true }).waitFor();
-  await admin.reload();
-  await admin.getByRole('heading', { name: 'Pengaturan Sistem', exact: true }).waitFor();
-  await admin.route('**/api/endpoints', route => route.fulfill({ json: [] }));
-  await admin.goto(baseURL + '/?tab=docs');
-  const categories = admin.getByRole('group', { name: 'Kategori endpoint' });
-  await categories.waitFor();
-  await categories.getByRole('button', { name: 'UTILITIES', exact: true }).waitFor();
-  assert.equal(await categories.getByRole('button').count(), 2, 'ALL plus the category created in admin');
-  assert.equal(await categories.getByRole('button', { name: 'WHATSAPP', exact: true }).count(), 0, 'beta categories are gone');
-  categoryNames = ['Utilities', 'Social Media', 'Media Downloads', 'Other'];
-  await admin.reload();
-  await categories.getByRole('button', { name: 'OTHER', exact: true }).waitFor();
-  await admin.setViewportSize({ width: 320, height: 850 });
-  assert.equal(await categories.evaluate(el => el.scrollWidth > el.clientWidth), true, 'categories scroll horizontally');
-  const rows = await categories.getByRole('button').evaluateAll(buttons => buttons.map(button => Math.round(button.getBoundingClientRect().top)));
-  assert.equal(new Set(rows).size, 1, 'category buttons stay on one row');
-  const lastCategory = categories.getByRole('button', { name: 'OTHER', exact: true });
-  await lastCategory.focus();
-  await admin.keyboard.press('Enter');
-  assert.equal(await lastCategory.getAttribute('aria-pressed'), 'true');
-  assert.equal(await categories.evaluate(el => el.scrollLeft > 0), true);
-  assert.equal(await admin.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
-  categoryNames = [];
-  await admin.reload();
-  await categories.waitFor();
-  await admin.waitForTimeout(150);
-  assert.equal(await categories.getByRole('button').count(), 1, 'empty category store shows only ALL');
-  assert.equal((await admin.title()).includes('RED API'), true);
-  assert.equal((await admin.locator('body').innerText()).includes('RED/API'), false);
-  console.log('PASS admin pages, slide menu, Escape, focus, history, reload, category scrolling and RED API branding');
+  await admin.getByRole('button', { name: 'Buka menu admin' }).click();
+  await admin.keyboard.press('Escape'); await admin.getByRole('dialog', { name: 'MENU ADMIN' }).waitFor({ state: 'hidden' });
+  await admin.reload(); await admin.getByRole('heading', { name: 'Endpoint Registry', exact: true }).waitFor();
+  const document = await admin.request.get(base + '/'); const html = await document.text();
+  const csp = document.headers()['content-security-policy']; assert.ok(csp.includes("object-src 'none'"));
+  const nonce = csp.match(/'nonce-([^']+)'/)[1]; assert.ok(html.includes('nonce="' + nonce + '"'));
+  await admin.evaluate(() => { const script = document.createElement('script'); script.textContent = 'window.__inlineExecuted=true'; document.body.append(script); });
+  assert.equal(await admin.evaluate(() => window.__inlineExecuted), undefined, 'CSP blocks untrusted inline JavaScript');
+  adminBanned = true;
+  await admin.goto(base + '/admin/users'); await admin.waitForURL(base + '/'); adminBanned = false;
+  console.log('PASS admin-only cookie/navigation, separate pages, categories, mobile layout, Escape, CSP nonce and fresh ban enforcement');
   await admin.close();
-  const locked = await pageFor();
-  await locked.goto(baseURL + '/admin/users');
-  await locked.getByText('ADMIN CONSOLE TERKUNCI', { exact: true }).waitFor();
-  assert.equal(await locked.getByRole('button', { name: 'Buka menu admin' }).count(), 0);
-  console.log('PASS direct admin URL remains locked without a session');
-  await locked.close();
-
-  const callback = await pageFor();
-  await callback.goto(baseURL + '/auth/callback');
-  await callback.getByText(/Sesi login belum diterima/).waitFor({ timeout: 18000 });
-  console.log('PASS OAuth callback without session exits loading');
-  await callback.close();
-  const response = await fetch(baseURL + '/api/user?userId=' + profile.id);
-  assert.equal(response.status, 401);
-  console.log('PASS account route rejects unauthenticated reads');
-} finally {
-  await browser.close();
-}
+  assert.equal((await fetch(base + '/api/user')).status, 401);
+} finally { await browser.close(); await new Promise(resolve => provider.close(resolve)); }

@@ -1,9 +1,11 @@
+import { hasForeignOrigin } from "@/lib/request-origin.server";
 import { NextRequest, NextResponse } from "next/server";
 
 export const dynamic = "force-dynamic";
 const respond = (body: unknown, status = 200) => NextResponse.json(body, { status, headers: { "Cache-Control": "no-store" } });
 
 async function request(req: NextRequest, method: "GET" | "POST") {
+  if (method === "POST" && hasForeignOrigin(req)) return respond({ error: "Origin tidak diizinkan." }, 403);
   try {
     const origin = new URL(process.env.API_BACKEND_URL || "http://127.0.0.1:3016");
     if (origin.username || origin.password || (origin.protocol !== "https:" && !(origin.protocol === "http:" && ["localhost", "127.0.0.1", "[::1]"].includes(origin.hostname)))) return respond({ error: "Backend memerlukan origin HTTPS." }, 503);

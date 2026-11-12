@@ -58,7 +58,7 @@ export default function AdminNavigation({ section }: { section: AdminSection }) 
             {adminSections.map(item => {
               const Icon = icons[item.icon];
               return (
-                <Link key={item.id} href={`/admin/${item.id}`} onClick={closeMenu} aria-current={section === item.id ? "page" : undefined}
+                <Link key={item.id} prefetch={false} href={`/admin/${item.id}`} onClick={closeMenu} aria-current={section === item.id ? "page" : undefined}
                   className={`flex items-start gap-3 rounded-xl border p-4 transition-colors ${section === item.id ? "border-red-800 bg-red-950/40 text-red-200" : "border-transparent text-zinc-300 hover:border-surface-border hover:bg-surface-card"}`}>
                   <Icon className="mt-0.5 h-4 w-4 shrink-0" />
                   <span className="min-w-0"><span className="block text-sm font-semibold">{item.title}</span><span className="mt-1 block text-xs leading-relaxed text-zinc-400">{item.description}</span></span>

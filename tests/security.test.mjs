@@ -59,5 +59,19 @@ test('migrations: registry authorization, account isolation, rotation and signup
   const registered = (await db.query("SELECT method, category, status FROM endpoints WHERE path='/api/download/tiktok'")).rows;
   assert.deepEqual(registered, [{ method: 'GET', category: 'Downloader', status: 'active' }], 'TikTok registration can be reapplied without duplicating entries');
   assert.equal((await db.query("SELECT id FROM endpoints WHERE path IN ('/api/ai/chat', '/api/download/instagram')")).rows.length, 0, 'other retired endpoints remain removed');
+  // Reproduce the production legacy policy before applying the permission repair.
+  await db.exec(`CREATE OR REPLACE FUNCTION public.is_admin() RETURNS boolean LANGUAGE sql STABLE SECURITY DEFINER SET search_path='' AS $$ SELECT EXISTS (SELECT 1 FROM public.profiles WHERE id=auth.uid() AND role='admin') $$;
+    GRANT EXECUTE ON FUNCTION public.deduct_user_quota(text) TO PUBLIC;
+    GRANT EXECUTE ON FUNCTION public.reset_daily_limits() TO PUBLIC;
+    SET ROLE authenticated;
+    SELECT set_config('request.jwt.claim.sub', '${admin}', false);`);
+  assert.equal((await db.query('SELECT is_admin() AS allowed')).rows[0].allowed, true, 'legacy helper incorrectly permits a banned admin');
+  await db.exec('RESET ROLE');
+  await db.exec(await readFile(new URL('../supabase/migrations/20261112040000_security_permissions.sql', import.meta.url), 'utf8'));
+  await db.exec(`SET ROLE authenticated`);
+  assert.equal((await db.query('SELECT is_admin() AS allowed')).rows[0].allowed, false);
+  assert.equal((await db.query('UPDATE profiles SET banned=false RETURNING id')).rows.length, 0, 'banned admin cannot unban themselves through RLS');
+  await assert.rejects(db.exec('SELECT reset_daily_limits()'), /permission denied/);
+  await assert.rejects(db.query('SELECT * FROM deduct_user_quota($1)', [key]), /permission denied/);
   await db.close();
 });

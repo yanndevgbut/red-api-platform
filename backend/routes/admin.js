@@ -1,64 +1,60 @@
 const express = require('express');
-const router = express.Router();
 const supabase = require('../config/supabase');
-const { readApiKey } = require('../middleware/auth');
-const { rejectRequest } = require('../middleware/validate');
+const requireAdmin = require('../middleware/admin-session');
+const { readCategories } = require('./categories');
+const router = express.Router();
+const profileFields = 'id,username,email,role,plan,limit_daily,limit_remaining,banned,created_at';
+const plans = { free: 100, basic: 3000, vip: 15000, enterprise: 999999 };
+const fail = (res, status, error) => res.status(status).json({ error });
+const uuid = value => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
+router.use(requireAdmin);
+router.use((_req, res, next) => { res.set('Cache-Control', 'private, no-store'); next(); });
 
-// Middleware to check admin role
-async function requireAdmin(req, res, next) {
-  const apiKey = readApiKey(req);
-  if (!apiKey) return rejectRequest(res, 401, 'Admin API key missing.');
-
-  const { data, error } = await supabase
-    .from('api_keys')
-    .select('user_id, profiles!inner(role, banned)')
-    .eq('key', apiKey)
-    .eq('is_active', true)
-    .maybeSingle();
-
-  if (error) return rejectRequest(res, 503, 'Authentication service unavailable.');
-  if (data?.profiles?.role !== 'admin' || data.profiles.banned !== false) {
-    return rejectRequest(res, 403, 'Active administrator required.');
-  }
-  req.apiUser = { id: data.user_id };
-
-  next();
-}
-
-// GET /api/admin/system
-router.get('/system', requireAdmin, async (req, res) => {
-  const [settings, users, endpoints] = await Promise.all([
-    supabase.from('system_settings').select('*').eq('id', 1).single(),
-    supabase.from('profiles').select('id', { count: 'exact', head: true }),
-    supabase.from('endpoints').select('id', { count: 'exact', head: true }),
-  ]);
-  if (settings.error || users.error || endpoints.error) return rejectRequest(res, 503, 'System data unavailable.');
-  res.json({ status: true, settings: settings.data, total_users: users.count, total_endpoints: endpoints.count });
+router.get('/endpoints', async (_req, res) => {
+  const result = await supabase.from('endpoints').select('*').order('id').limit(1000);
+  if (result.error) return fail(res, 503, 'Katalog tidak dapat dimuat.');
+  return res.json(result.data);
 });
-
-// POST /api/admin/maintenance
-router.post('/maintenance', requireAdmin, async (req, res) => {
+router.post('/endpoints', async (req, res) => {
+  const { name, category, method, path, description, min_plan } = req.body ?? {};
+  if (typeof name !== 'string' || !name.trim() || name.length > 120 || typeof category !== 'string' || category.length > 60 || !['GET', 'POST'].includes(method) || typeof path !== 'string' || !/^\/api\/(ai|download|stalk|tools|whatsapp)\/[a-z0-9_-]+$/.test(path) || path.length > 180 || typeof description !== 'string' || description.length > 2000 || !Object.hasOwn(plans, min_plan)) return fail(res, 400, 'Data endpoint tidak valid.');
+  try { if (!(await readCategories()).includes(category)) return fail(res, 400, 'Kategori tidak tersedia.'); }
+  catch { return fail(res, 503, 'Kategori belum tersedia.'); }
+  const result = await supabase.from('endpoints').insert({ name: name.trim(), category, method, path, description, min_plan, status: 'active', params: [] }).select().single();
+  if (result.error) return fail(res, result.error.code === '23505' ? 409 : 503, 'Endpoint tidak dapat ditambahkan.');
+  return res.status(201).json(result.data);
+});
+router.delete('/endpoints/:id', async (req, res) => {
+  if (!/^[1-9]\d{0,9}$/.test(req.params.id) || Number(req.params.id) > 2147483647) return fail(res, 400, 'ID endpoint tidak valid.');
+  const result = await supabase.from('endpoints').delete().eq('id', Number(req.params.id)).select('id');
+  if (result.error) return fail(res, 503, 'Endpoint tidak dapat dihapus.');
+  return result.data?.length ? res.json({ deleted: true }) : fail(res, 404, 'Endpoint tidak ditemukan.');
+});
+router.get('/users', async (_req, res) => {
+  const result = await supabase.from('profiles').select(profileFields).order('created_at', { ascending: false }).limit(200);
+  return result.error ? fail(res, 503, 'Pengguna tidak dapat dimuat.') : res.json(result.data);
+});
+router.patch('/users/:id', async (req, res) => {
+  const body = req.body ?? {};
+  if (!uuid(req.params.id) || !Object.keys(body).length || Object.keys(body).some(key => !['role', 'plan', 'banned'].includes(key)) || ('role' in body && !['user', 'admin'].includes(body.role)) || ('plan' in body && !Object.hasOwn(plans, body.plan)) || ('banned' in body && typeof body.banned !== 'boolean')) return fail(res, 400, 'Perubahan pengguna tidak valid.');
+  const changes = { ...body, updated_at: new Date().toISOString() };
+  if (body.plan) changes.limit_daily = plans[body.plan];
+  const result = await supabase.from('profiles').update(changes).eq('id', req.params.id).select(profileFields).maybeSingle();
+  if (result.error) return fail(res, 503, 'Pengguna tidak dapat diperbarui.');
+  return result.data ? res.json(result.data) : fail(res, 404, 'Pengguna tidak ditemukan.');
+});
+router.get('/logs', async (_req, res) => {
+  const result = await supabase.from('api_logs').select('id,user_id,ip_address,method,endpoint_path,status_code,latency_ms,created_at').order('id', { ascending: false }).limit(25);
+  return result.error ? fail(res, 503, 'Log tidak dapat dimuat.') : res.json(result.data);
+});
+router.get('/system', async (_req, res) => {
+  const result = await supabase.from('system_settings').select('maintenance_mode,maintenance_message,updated_at').eq('id', 1).single();
+  return result.error ? fail(res, 503, 'Pengaturan tidak dapat dimuat.') : res.json(result.data);
+});
+router.post('/maintenance', async (req, res) => {
   const { active, message } = req.body ?? {};
-  if (typeof active !== 'boolean' || (message !== undefined && (typeof message !== 'string' || message.length > 500))) {
-    return rejectRequest(res, 400, 'Provide a boolean active flag and an optional message of up to 500 characters.');
-  }
-
-  const { data, error } = await supabase
-    .from('system_settings')
-    .update({
-      maintenance_mode: active,
-      maintenance_message: message || 'System under scheduled maintenance.',
-      updated_at: new Date().toISOString()
-    })
-    .eq('id', 1)
-    .select()
-    .single();
-
-  if (error) {
-    return rejectRequest(res, 503, 'Could not update maintenance mode.');
-  }
-
-  res.json({ status: true, message: 'Maintenance mode updated', settings: data });
+  if (typeof active !== 'boolean' || (message !== undefined && (typeof message !== 'string' || message.length > 500))) return fail(res, 400, 'Pengaturan tidak valid.');
+  const result = await supabase.from('system_settings').update({ maintenance_mode: active, maintenance_message: message || 'System under scheduled maintenance.', updated_at: new Date().toISOString() }).eq('id', 1).select('maintenance_mode,maintenance_message,updated_at').single();
+  return result.error ? fail(res, 503, 'Pengaturan tidak dapat diperbarui.') : res.json(result.data);
 });
-
 module.exports = router;

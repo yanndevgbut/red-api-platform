@@ -11,8 +11,8 @@ async function proxy(req: NextRequest, { params }: Context) {
 
   try {
     const upstream = new URL(path, process.env.API_BACKEND_URL || "http://127.0.0.1:3016");
-    if (upstream.protocol !== "https:" &&
-        !(upstream.protocol === "http:" && ["localhost", "127.0.0.1", "[::1]"].includes(upstream.hostname))) {
+    if (upstream.username || upstream.password || (upstream.protocol !== "https:" &&
+        !(upstream.protocol === "http:" && ["localhost", "127.0.0.1", "[::1]"].includes(upstream.hostname)))) {
       return NextResponse.json({ error: "Node API memerlukan origin HTTPS." }, { status: 503 });
     }
     upstream.search = req.nextUrl.search;

@@ -8,7 +8,7 @@ function respond(body: unknown, status = 200) {
 
 export async function GET(req: NextRequest) {
   const token = req.headers.get("authorization")?.match(/^Bearer (\S+)$/i)?.[1];
-  if (!token) return respond({ error: "Login diperlukan." }, 401);
+  if (!token || token.length > 8192) return respond({ error: "Login diperlukan." }, 401);
 
   try {
     const { url, key } = getSupabasePublicConfig();

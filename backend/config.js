@@ -8,8 +8,8 @@ if (!supabaseUrl || !supabaseKey) {
 }
 
 module.exports = {
-  port: process.env.PORT || 3016,
+  port: process.env.SERVER_PORT || process.env.PORT || 3016,
   supabaseUrl,
   supabaseKey,
-  corsOrigins: (process.env.CORS_ORIGINS || '').split(',').map(origin => origin.trim()).filter(Boolean),
+  corsOrigins: (process.env.CORS_ORIGINS || 'https://red-api-platform.vercel.app').split(',').map(origin => origin.trim()).filter(Boolean),
 };

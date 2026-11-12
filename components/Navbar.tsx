@@ -100,7 +100,7 @@ export default function Navbar({
           })}
 
           {/* Admin Panel Link */}
-          <button
+          {user?.role === "admin" && user.banned === false && <button
             onClick={() => setActiveTab("admin")}
             className={`px-3 py-1.5 rounded text-red-400 hover:text-red-300 hover:bg-red-950/30 border border-red-900/50 transition-all flex items-center gap-1.5 ${
               activeTab === "admin" ? "bg-red-950/60 font-bold" : ""
@@ -108,7 +108,7 @@ export default function Navbar({
           >
             {!user ? <Lock className="w-3 h-3 text-red-500" /> : <Shield className="w-3.5 h-3.5" />}
             ADMIN PANEL
-          </button>
+          </button>}
         </nav>
 
         {/* Right User State & Drawer Trigger */}

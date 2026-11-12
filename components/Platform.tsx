@@ -11,7 +11,7 @@ import CodeSnippet from "@/components/CodeSnippet";
 import DocsAccordion from "@/components/DocsAccordion";
 import PricingTiers from "@/components/PricingTiers";
 import UserDashboard from "@/components/UserDashboard";
-import AdminConsole from "@/components/AdminConsole";
+import dynamic from "next/dynamic";
 import AuthModal from "@/components/AuthModal";
 import { Profile, ApiKey } from "@/types";
 import { ArrowRight, Lock, LogIn } from "lucide-react";
@@ -19,6 +19,8 @@ import { getSupabase } from "@/lib/supabase";
 import { useRouter } from "next/navigation";
 import type { AdminSection } from "@/lib/admin-navigation";
 import type { Session } from "@supabase/supabase-js";
+
+const AdminConsole = dynamic(() => import("@/components/AdminConsole"), { ssr: false, loading: () => <PageLoading /> });
 
 export default function Platform({ initialTab = "landing", adminSection }: { initialTab?: string; adminSection?: AdminSection }) {
   const router = useRouter();
@@ -93,13 +95,25 @@ export default function Platform({ initialTab = "landing", adminSection }: { ini
 
   const currentUser = session?.user.id === user?.id ? user : null;
   const currentKey = currentUser?.id === apiKey?.user_id ? apiKey : null;
-  const canAdmin = currentUser?.role === "admin" && !currentUser.banned;
+  const canAdmin = currentUser?.role === "admin" && currentUser.banned === false;
 
   useEffect(() => {
-    if (activeTab === "admin" && !adminSection) router.replace("/admin/endpoints");
-  }, [activeTab, adminSection, router]);
+    if (!authResolved || authIssue || (session && !currentUser)) return;
+    if ((activeTab === "admin" || adminSection) && !canAdmin) {
+      setActiveTab("landing");
+      router.replace("/");
+    }
+    if (session && canAdmin) {
+      void fetch("/api/admin/session", { method: "POST", headers: { Authorization: `Bearer ${session.access_token}` }, signal: AbortSignal.timeout(10000) })
+        .then(response => { if (response.ok && activeTab === "admin" && !adminSection) router.replace("/admin/endpoints"); })
+        .catch(() => {});
+    } else {
+      void fetch("/api/admin/session", { method: "DELETE" }).catch(() => {});
+    }
+  }, [authResolved, authIssue, session, currentUser, canAdmin, activeTab, adminSection, router]);
 
-  const handleTabSelect = (tabId: string) => {
+  const handleTabSelect = async (tabId: string) => {
+    if (tabId === "admin" && !canAdmin) { setActiveTab("landing"); router.replace("/"); return; }
     const protectedTabs = ["docs", "profile", "admin"];
     if (protectedTabs.includes(tabId) && !session) {
       const reasons: Record<string, string> = {
@@ -113,6 +127,10 @@ export default function Platform({ initialTab = "landing", adminSection }: { ini
     }
 
     if (tabId === "admin") {
+      try {
+        const response = await fetch("/api/admin/session", { method: "POST", headers: { Authorization: `Bearer ${session!.access_token}` }, signal: AbortSignal.timeout(10000) });
+        if (!response.ok) throw new Error();
+      } catch { setAccountError("Akses administrator tidak dapat diverifikasi."); return; }
       router.push("/admin/endpoints");
       return;
     }
@@ -137,6 +155,8 @@ export default function Platform({ initialTab = "landing", adminSection }: { ini
       if (adminSection) router.replace("/");
     }
   };
+
+  if ((activeTab === "admin" || adminSection) && authResolved && !authIssue && (!session || currentUser) && !canAdmin) return <PageLoading />;
 
   // A missing profile is not evidence that the visitor is signed out.
   if (!authResolved || (session && !currentUser && !accountError)) {
@@ -316,38 +336,8 @@ export default function Platform({ initialTab = "landing", adminSection }: { ini
           </section>
         )}
 
-        {/* VIEW 5: ADMIN CONSOLE (Protected) */}
-        {activeTab === "admin" && (
-          <section className="animate-fade-in">
-            {!currentUser ? (
-              <div className="p-4 sm:p-10 text-center bg-surface-panel border-2 border-red-900/60 rounded-xl space-y-4 max-w-xl mx-auto shadow-2xl">
-                <div className="w-12 h-12 bg-red-950/80 border border-red-800 rounded-full flex items-center justify-center mx-auto text-red-500">
-                  <Lock className="w-6 h-6" />
-                </div>
-                <h3 className="font-bebas text-4xl text-white tracking-wide">
-                  ADMIN CONSOLE TERKUNCI
-                </h3>
-                <p className="text-xs font-mono-code text-zinc-400 max-w-md mx-auto leading-relaxed">
-                  Otentikasi administrator dibutuhkan untuk mengakses manajemen endpoint dan server settings.
-                </p>
-                <button
-                  onClick={() => {
-                    setAuthReason("Login dengan akun Google Admin terverifikasi.");
-                    setAuthModalOpen(true);
-                  }}
-                  className="px-6 py-2.5 bg-red-600 hover:bg-red-500 text-black font-bold font-mono-code text-xs rounded uppercase inline-flex items-center gap-2 shadow-[0_0_20px_rgba(220,38,38,0.4)]"
-                >
-                  <LogIn className="w-4 h-4" />
-                  MASUK DENGAN GOOGLE
-                </button>
-              </div>
-            ) : (
-              canAdmin ? <AdminConsole section={adminSection ?? "endpoints"} /> : (
-                <p role="status" className="rounded-xl border border-red-900 bg-surface-panel p-5 text-red-300">Akses konsol memerlukan akun administrator aktif.</p>
-              )
-            )}
-          </section>
-        )}
+        {/* Admin components are mounted only after the verified account is authorized. */}
+        {activeTab === "admin" && canAdmin && <AdminConsole section={adminSection ?? "endpoints"} />}
 
       </main>
 

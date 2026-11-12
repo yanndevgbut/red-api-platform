@@ -53,7 +53,7 @@ Uji database memakai PostgreSQL embedded PGlite dengan pgcrypto dan mencakup mig
 Untuk regresi browser, buat build khusus pengujian (jangan deploy konfigurasi dummy ini):
 
 ```sh
-NEXT_PUBLIC_SUPABASE_URL=https://test-project.supabase.co NEXT_PUBLIC_SUPABASE_ANON_KEY=sb_publishable_test npm run build
+NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:54321 NEXT_PUBLIC_SUPABASE_ANON_KEY=sb_publishable_test npm run build
 npm start
 # Terminal lain; Chromium harus tersedia, atau set CHROMIUM_PATH.
 npm run test:browser
@@ -91,3 +91,16 @@ curl -H "x-api-key: YOUR_KEY" --get \
   --data-urlencode "url=https://vt.tiktok.com/ZS9ChQ9WD/" \
   "https://red-api-platform.vercel.app/api/proxy/api/download/tiktok"
 ```
+
+
+## Keamanan admin
+
+Menu admin hanya tampil untuk profil ber-role `admin` dengan `banned=false`. Server memverifikasi token Supabase dan role terbaru sebelum merender setiap halaman `/admin`; tamu/member diarahkan ke `/`. Cookie admin dibuat otomatis setelah sesi admin diverifikasi dan saat menu admin dibuka. Cookie menggunakan `HttpOnly`, `Secure`, `SameSite=Strict`, path `/admin`, dan masa hidup maksimal satu jam. Membuka URL admin tanpa cookie yang valid akan kembali ke landing; masuk melalui menu setelah login admin.
+
+Operasi admin memakai `/api/admin/*` dengan Bearer token sesi, diteruskan ke backend yang memverifikasi identitas dan role pada setiap request. API key layanan umum tidak dapat dipakai untuk administrasi. Cookie bukan otorisasi untuk API mutasi. Read/write admin memakai field yang ditentukan server, validasi ID dan enum, limit daftar, serta error generik. Halaman admin tidak diindeks dan responsnya tidak disimpan pada cache publik.
+
+CSP memakai nonce baru setiap request dan menolak script inline tanpa nonce. API memiliki batas body dan rate limit per peer jaringan (satu proses, bukan pengganti proteksi WAF/distributed rate limiting). `X-Forwarded-For` dari pemanggil tidak dipercaya. Header keamanan menonaktifkan sniffing, framing, dan fitur perangkat yang tidak dipakai.
+
+Sebelum menyatakan rollout keamanan lengkap, terapkan `supabase/migrations/20261112040000_security_permissions.sql` di Supabase SQL Editor dan rotasi semua credential berhak tinggi yang pernah terekspos. Migrasi membatasi mutasi kuota hanya ke `service_role` dan memastikan helper RLS admin memeriksa banned. Kunci yang sudah ada di riwayat Git tetap perlu dicabut meskipun source saat ini bersih. Penggantinya hanya dipasang pada environment backend; jangan memakai `NEXT_PUBLIC_`. Endpoint admin baru membutuhkan `backend/middleware/admin-session.js` serta router admin/categories terbaru.
+
+Uji browser memakai fixture Supabase lokal pada port 54321 (dijalankan otomatis oleh script). Build dengan konfigurasi dummy lokal seperti contoh validasi, jalankan frontend pada terminal lain, lalu `npm run test:browser`. Pengujian mencakup redirect tamu/member, cookie palsu, role terbaru, CSP, IDOR akun, dan escaping XSS. Jangan deploy konfigurasi dummy pengujian.

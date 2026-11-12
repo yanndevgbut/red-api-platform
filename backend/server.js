@@ -1,5 +1,6 @@
 const express = require('express');
 const cors = require('cors');
+const rateLimit = require('./middleware/rate-limit');
 const config = require('./config');
 
 const checkMaintenance = require('./middleware/maintenance');
@@ -16,10 +17,13 @@ app.disable('x-powered-by');
 app.use((_req, res, next) => {
   res.set('Cache-Control', 'no-store');
   res.set('X-Content-Type-Options', 'nosniff');
+  res.set('Content-Security-Policy', "default-src 'none'; frame-ancestors 'none'; base-uri 'none'");
+  res.set('X-Frame-Options', 'DENY');
+  res.set('Referrer-Policy', 'no-referrer');
   next();
 });
 
-app.use(cors({ origin: config.corsOrigins, allowedHeaders: ['Content-Type', 'x-api-key'] }));
+app.use(cors({ origin: config.corsOrigins, allowedHeaders: ['Content-Type', 'x-api-key', 'Authorization'] }));
 
 // Health Check (Always 200 OK)
 app.get('/health', (req, res) => {
@@ -30,6 +34,7 @@ app.get('/health', (req, res) => {
   });
 });
 
+app.use(rateLimit());
 app.use(express.json({ limit: '16kb' }));
 app.use(express.urlencoded({ extended: false, limit: '16kb' }));
 app.use(requestLogger);

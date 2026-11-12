@@ -2,7 +2,7 @@ const express = require('express');
 const fs = require('node:fs/promises');
 const path = require('node:path');
 const { randomUUID } = require('node:crypto');
-const supabase = require('../config/supabase');
+const requireAdmin = require('../middleware/admin-session');
 
 const router = express.Router();
 const store = process.env.CATEGORIES_FILE || path.join(__dirname, '../data/categories.json');
@@ -27,17 +27,9 @@ router.get('/system/categories', async (_req, res) => {
   catch { res.status(503).json({ error: 'Kategori belum dapat dimuat.' }); }
 });
 
-router.post('/admin/categories', async (req, res) => {
+router.post('/admin/categories', requireAdmin, async (req, res) => {
   res.set('Cache-Control', 'no-store');
-  const token = req.get('authorization')?.match(/^Bearer (\S+)$/i)?.[1];
-  if (!token || token.length > 8192) return res.status(401).json({ error: 'Login diperlukan.' });
   try {
-    const { data: { user }, error } = await supabase.auth.getUser(token);
-    if (error || !user) return res.status(401).json({ error: 'Sesi tidak valid.' });
-    const profile = await supabase.from('profiles').select('role,banned').eq('id', user.id).maybeSingle();
-    if (profile.error) return res.status(503).json({ error: 'Verifikasi administrator belum tersedia.' });
-    if (profile.data?.role !== 'admin' || profile.data?.banned !== false) return res.status(403).json({ error: 'Administrator aktif diperlukan.' });
-    req.apiUser = { id: user.id };
     const name = normalize(req.body?.name);
     if (!valid(name)) return res.status(400).json({ error: 'Nama kategori harus 1–60 karakter. ALL adalah filter bawaan.' });
 
@@ -65,3 +57,5 @@ router.post('/admin/categories', async (req, res) => {
 });
 
 module.exports = router;
+
+module.exports.readCategories = readCategories;

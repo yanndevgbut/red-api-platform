@@ -4,7 +4,7 @@ function requestLogger(req, res, next) {
   const start = Date.now();
 
   res.on('finish', () => {
-    const fullPath = req.originalUrl ? req.originalUrl.split('?')[0] : req.path;
+    const fullPath = (req.originalUrl ? req.originalUrl.split('?')[0] : req.path).slice(0, 512);
     // Only log API routes, ignore static / favicon
     if (!fullPath.startsWith('/api/')) return;
 

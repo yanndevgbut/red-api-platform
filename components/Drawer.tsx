@@ -156,7 +156,7 @@ export default function Drawer({
               );
             })}
 
-            <button
+            {user?.role === "admin" && user.banned === false && <button
               onClick={() => handleNav("admin")}
               className="w-full text-left py-2.5 px-3 rounded bg-red-950/30 hover:bg-red-950/60 border border-red-900/60 flex items-center justify-between group transition-all"
             >
@@ -169,7 +169,7 @@ export default function Drawer({
                 05. MASTER ADMIN CONSOLE
               </span>
               <ArrowRight className="w-3.5 h-3.5 text-red-400 group-hover:translate-x-0.5 transition-transform" />
-            </button>
+            </button>}
           </div>
 
           {/* Quick Info */}
