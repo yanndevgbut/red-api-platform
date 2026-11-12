@@ -86,7 +86,7 @@ export default function DocsAccordion({ defaultKey }: { defaultKey?: string }) {
       // Collect params
       if (ep.params && ep.params.length > 0) {
         ep.params.filter(p => p.name !== "apikey").forEach((p) => {
-          const val = paramValues[`${ep.id}_${p.name}`] ?? p.default ?? "";
+          const val = paramValues[`${ep.id}_${p.name}`] ?? "";
           if (ep.method === "GET") {
             queryParams.append(p.name, val);
           }
@@ -107,7 +107,7 @@ export default function DocsAccordion({ defaultKey }: { defaultKey?: string }) {
         const bodyObj: any = {};
         if (ep.params && ep.params.length > 0) {
           ep.params.filter(p => p.name !== "apikey").forEach((p) => {
-            bodyObj[p.name] = paramValues[`${ep.id}_${p.name}`] ?? p.default ?? "";
+            bodyObj[p.name] = paramValues[`${ep.id}_${p.name}`] ?? "";
           });
         }
         fetchOptions.headers = {
@@ -280,23 +280,12 @@ export default function DocsAccordion({ defaultKey }: { defaultKey?: string }) {
                   <div className="accordion-inner">
                     <div className="min-w-0 p-3 sm:p-5 border-t border-surface-border bg-black/60 space-y-5">
                       
-                      {/* Host & API Key Row */}
-                      <div className="grid grid-cols-1 md:grid-cols-12 gap-3 text-xs font-mono-code">
-                        <div className="md:col-span-5 space-y-1">
-                          <label className="text-zinc-400">API GATEWAY</label>
-                          <input
-                            type="text"
-                            readOnly
-                            aria-label="API gateway"
-                            value={API_BASE}
-                            className="w-full bg-surface-card border border-surface-border px-3 py-1.5 rounded text-zinc-400 focus:outline-none"
-                          />
-                        </div>
-
-                        <div className="md:col-span-7 space-y-1">
+                      {/* API Key */}
+                      <div className="text-xs font-mono-code">
+                        <div className="space-y-1">
                           <label className="text-zinc-400">AUTHENTICATION (API KEY)</label>
                           <input
-                            type="password"
+                            type="text"
                             autoComplete="off"
                             aria-label="API key"
                             value={apiKeys[ep.id] ?? defaultKey ?? ""}
@@ -336,7 +325,7 @@ export default function DocsAccordion({ defaultKey }: { defaultKey?: string }) {
                                       <input
                                         type="text"
                                         aria-label={p.name}
-                                        value={paramValues[`${ep.id}_${p.name}`] ?? p.default ?? ""}
+                                        value={paramValues[`${ep.id}_${p.name}`] ?? ""}
                                         onChange={(e) => handleParamChange(ep.id, p.name, e.target.value)}
                                         className="w-full bg-surface-card border border-surface-border px-2.5 py-1 text-xs text-white rounded focus:border-red-600 focus:outline-none"
                                       />
