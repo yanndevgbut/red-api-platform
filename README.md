@@ -104,3 +104,17 @@ CSP memakai nonce baru setiap request dan menolak script inline tanpa nonce. API
 Sebelum menyatakan rollout keamanan lengkap, terapkan `supabase/migrations/20261112040000_security_permissions.sql` di Supabase SQL Editor dan rotasi semua credential berhak tinggi yang pernah terekspos. Migrasi membatasi mutasi kuota hanya ke `service_role` dan memastikan helper RLS admin memeriksa banned. Kunci yang sudah ada di riwayat Git tetap perlu dicabut meskipun source saat ini bersih. Penggantinya hanya dipasang pada environment backend; jangan memakai `NEXT_PUBLIC_`. Endpoint admin baru membutuhkan `backend/middleware/admin-session.js` serta router admin/categories terbaru.
 
 Uji browser memakai fixture Supabase lokal pada port 54321 (dijalankan otomatis oleh script). Build dengan konfigurasi dummy lokal seperti contoh validasi, jalankan frontend pada terminal lain, lalu `npm run test:browser`. Pengujian mencakup redirect tamu/member, cookie palsu, role terbaru, CSP, IDOR akun, dan escaping XSS. Jangan deploy konfigurasi dummy pengujian.
+
+
+## Free Fire Stalker
+
+`GET /api/stalk/ff?uid=12345678` memakai scraper profil publik dari `adenpedia.my.id/update01/info.php`. Endpoint berada di kategori `Stalk`, tersedia untuk paket free, dan membutuhkan API key pada header `x-api-key`. UID wajib berupa 8–11 digit; validasi dilakukan sebelum pemotongan kuota. Kolom UID di tester tetap kosong sampai diisi pengguna.
+
+Respons `result` memuat `uid`, `nickname`, `rankBR`, `rankCS`, `primeLevel`, `bio`, `likes`, `playerLevel`, `serverRegion`, `booyahPass`, `estimatedTopUpIDR`, dan `topUpEstimateNote`. Label rank dan estimasi top-up mengikuti rumus scraper referensi. Nilai top-up adalah estimasi, bukan riwayat transaksi resmi; untuk Prime 8+ disajikan sebagai rentang.
+
+Request provider memakai origin tetap, timeout 15 detik, tanpa meneruskan API key, dan batas JSON 512 KiB. Profil kosong menghasilkan `404`, kegagalan provider `502`, timeout `504`. Deploy `backend/lib/stalk-ff.js`, `backend/routes/stalker.js`, dan mounting router stalk pada server, terapkan `supabase/migrations/20261113000000_add_free_fire_endpoint.sql` untuk katalog, lalu tambahkan kategori `Stalk` pada admin jika memakai instalasi baru.
+
+```sh
+curl -H "x-api-key: YOUR_KEY" \
+  "https://api.redapi.my.id/api/stalk/ff?uid=12345678"
+```

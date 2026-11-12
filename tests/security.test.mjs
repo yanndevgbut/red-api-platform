@@ -59,6 +59,9 @@ test('migrations: registry authorization, account isolation, rotation and signup
   const registered = (await db.query("SELECT method, category, status FROM endpoints WHERE path='/api/download/tiktok'")).rows;
   assert.deepEqual(registered, [{ method: 'GET', category: 'Downloader', status: 'active' }], 'TikTok registration can be reapplied without duplicating entries');
   assert.equal((await db.query("SELECT id FROM endpoints WHERE path IN ('/api/ai/chat', '/api/download/instagram')")).rows.length, 0, 'other retired endpoints remain removed');
+  const ffMigration = await readFile(new URL('../supabase/migrations/20261113000000_add_free_fire_endpoint.sql', import.meta.url), 'utf8');
+  await db.exec(ffMigration); await db.exec(ffMigration);
+  assert.deepEqual((await db.query("SELECT category, method, params FROM endpoints WHERE path='/api/stalk/ff'")).rows, [{ category: 'Stalk', method: 'GET', params: [{ name: 'uid', type: 'string', required: true }] }]);
   // Reproduce the production legacy policy before applying the permission repair.
   await db.exec(`CREATE OR REPLACE FUNCTION public.is_admin() RETURNS boolean LANGUAGE sql STABLE SECURITY DEFINER SET search_path='' AS $$ SELECT EXISTS (SELECT 1 FROM public.profiles WHERE id=auth.uid() AND role='admin') $$;
     GRANT EXECUTE ON FUNCTION public.deduct_user_quota(text) TO PUBLIC;

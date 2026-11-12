@@ -17,10 +17,13 @@ test('retired endpoints remain removed and TikTok requires valid input and authe
   try {
     assert.equal((await fetch(base + '/health')).status, 200);
     assert.equal((await fetch(base + '/api/system/stats')).status, 200);
-    assert.equal((await (await fetch(base + '/')).json()).endpoints_count, 1);
+    assert.equal((await (await fetch(base + '/')).json()).endpoints_count, 2);
     assert.equal((await fetch(base + '/api/download/tiktok')).status, 400);
     assert.equal((await fetch(base + '/api/download/tiktok?url=https://example.com')).status, 400);
     assert.equal((await fetch(base + '/api/download/tiktok?url=https://vt.tiktok.com/test')).status, 401);
+    assert.equal((await fetch(base + '/api/stalk/ff')).status, 400);
+    assert.equal((await fetch(base + '/api/stalk/ff?uid=12345678')).status, 401);
+    assert.equal((await fetch(base + '/api/stalk/ff?uid=12345678&uid=87654321')).status, 400);
     for (const [method, path] of [
       ['GET', '/api/ai/chat?prompt=test'], ['POST', '/api/ai/gpt'],
       ['GET', '/api/download/instagram?url=https://www.instagram.com/p/test'],
