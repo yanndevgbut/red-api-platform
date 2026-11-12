@@ -22,7 +22,13 @@ export const metadata: Metadata = {
   title: "RED API — High Velocity REST API Platform",
   description: "Enterprise REST API Gateway running on distributed Pterodactyl Node with AI, Media Scraping, and Stalker services.",
   icons: {
-    icon: "/favicon.ico",
+    icon: [
+      { url: "/favicon.ico?v=red-api-logo", sizes: "any" },
+      { url: "/brand/icon-32.png", type: "image/png", sizes: "32x32" },
+      { url: "/brand/icon-192.png", type: "image/png", sizes: "192x192" },
+    ],
+    shortcut: "/favicon.ico?v=red-api-logo",
+    apple: { url: "/brand/icon-180.png", sizes: "180x180", type: "image/png" },
   },
 };
 

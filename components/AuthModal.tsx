@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useRef, useState } from "react";
+import { BrandIcon } from "@/components/BrandLogo";
 import { getSupabase } from "@/lib/supabase";
 import { X, ShieldAlert, KeyRound, Terminal, CheckCircle2, Loader2 } from "lucide-react";
 
@@ -64,6 +65,7 @@ export default function AuthModal({ isOpen, onClose, reason }: AuthModalProps) {
 
         {/* Modal Header */}
         <div className="space-y-2 pr-6">
+          <BrandIcon className="h-12 w-12" />
           <div className="inline-flex items-center gap-2 px-2.5 py-1 bg-red-950/70 border border-red-800 text-red-300 text-[10px] font-mono-code rounded uppercase font-bold">
             <ShieldAlert className="w-3.5 h-3.5 text-red-500" />
             LOGIN REQUIRED · OTENTIKASI WAJIB

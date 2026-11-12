@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { getSupabase } from "@/lib/supabase";
+import { BrandIcon } from "@/components/BrandLogo";
 import { Loader2 } from "lucide-react";
 
 export default function AuthCallbackPage() {
@@ -55,9 +56,7 @@ export default function AuthCallbackPage() {
   return (
     <div className="min-h-screen bg-[#08080a] flex flex-col items-center justify-center p-4 font-mono-code text-xs">
       <div className="bg-surface-panel border border-surface-border p-8 rounded-lg max-w-sm w-full text-center space-y-4 shadow-2xl">
-        <div className="w-10 h-10 bg-red-600 rounded flex items-center justify-center font-bebas text-2xl text-black font-bold mx-auto">
-          R
-        </div>
+        <BrandIcon className="mx-auto h-16 w-16" />
 
         {errorMsg ? (
           <div className="space-y-2">

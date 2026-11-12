@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
+import { BrandWordmark } from "@/components/BrandLogo";
 import PageLoading from "@/components/PageLoading";
 import Navbar from "@/components/Navbar";
 import Drawer from "@/components/Drawer";
@@ -354,9 +355,7 @@ export default function Platform({ initialTab = "landing", adminSection }: { ini
       <footer className="border-t border-surface-border bg-surface-panel py-8 mt-16 text-xs font-mono-code text-zinc-500">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex flex-wrap items-center gap-2">
-            <span className="font-bebas text-xl text-white">
-              RED<span className="text-red-600"> API</span>
-            </span>
+            <BrandWordmark />
             <span>— HIGH PERFORMANCE REST API GATEWAY</span>
           </div>
           <div>

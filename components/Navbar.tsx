@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import { Terminal, Shield, Menu, Lock, LogIn, LogOut, User } from "lucide-react";
+import { BrandIcon } from "@/components/BrandLogo";
 import { Profile } from "@/types";
 import { API_BASE } from "@/lib/api";
 
@@ -58,10 +59,8 @@ export default function Navbar({
         
         {/* Logo */}
         <div className="flex items-center gap-3">
-          <button onClick={() => setActiveTab("landing")} className="flex items-center gap-2 group text-left">
-            <div className="w-8 h-8 bg-red-600 flex items-center justify-center font-bebas text-2xl text-black font-bold transform -skew-x-6 group-hover:scale-105 transition-transform">
-              R
-            </div>
+          <button aria-label="RED API — Beranda" onClick={() => setActiveTab("landing")} className="flex items-center gap-2 group text-left">
+            <BrandIcon decorative className="h-10 w-10 transition-transform group-hover:scale-105" />
             <div className="flex flex-col">
               <span className="font-bebas text-2xl tracking-wider leading-none text-white flex items-center gap-1">
                 RED<span className="text-red-600"> API</span>
