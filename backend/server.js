@@ -36,7 +36,7 @@ app.use(checkMaintenance);
 // Root Info
 app.get('/', (req, res) => {
   res.json({
-    name: 'RED/API Backend Engine',
+    name: 'RED API Backend Engine',
     version: '2.4.1',
     status: 'running',
     endpoints_count: 0
@@ -52,7 +52,7 @@ app.use((req, res) => {
   res.status(404).json({
     status: false,
     code: 404,
-    message: `Endpoint ${req.method} ${req.path} not found in RED/API registry.`
+    message: `Endpoint ${req.method} ${req.path} not found in RED API registry.`
   });
 });
 

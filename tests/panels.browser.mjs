@@ -59,7 +59,61 @@ try {
   await admin.getByRole('button', { name: 'Coba lagi / Refresh' }).click();
   await admin.getByText('Data panel tersinkronisasi.', { exact: false }).waitFor();
   console.log('PASS admin provider error and retry');
+  await admin.waitForURL('**/admin/endpoints');
+  assert.equal(await admin.locator('form').count(), 0, 'registry page excludes endpoint creation');
+  assert.equal(await admin.getByText('MAINTENANCE MODE', { exact: true }).count(), 0);
+  const menu = () => admin.getByRole('dialog', { name: 'MENU ADMIN' });
+  await admin.getByRole('button', { name: 'Buka menu admin' }).click();
+  await menu().waitFor();
+  await admin.keyboard.press('Escape');
+  await menu().waitFor({ state: 'hidden' });
+  assert.equal(await admin.getByRole('button', { name: 'Buka menu admin' }).evaluate(el => el === document.activeElement), true, 'focus returns to menu trigger');
+  const sections = [
+    ['new-endpoint', 'Tambah Endpoint'], ['users', 'Manajemen Pengguna'],
+    ['logs', 'Log Akses'], ['settings', 'Pengaturan Sistem'], ['endpoints', 'Endpoint Registry'],
+  ];
+  for (const [id, title] of sections) {
+    await admin.getByRole('button', { name: 'Buka menu admin' }).click();
+    await menu().getByRole('link', { name: new RegExp(title) }).click();
+    await admin.waitForURL(`**/admin/${id}`);
+    await admin.getByRole('heading', { name: title, exact: true }).waitFor();
+    assert.equal(await admin.getByRole('dialog').count(), 0, 'menu closes after navigation');
+    for (const width of [320, 360, 768]) {
+      await admin.setViewportSize({ width, height: 850 });
+      assert.equal(await admin.evaluate(() => document.documentElement.scrollWidth > innerWidth), false, `admin ${id} overflow at ${width}px`);
+    }
+    if (id === 'new-endpoint') assert.equal(await admin.locator('form').count(), 1);
+    if (id !== 'settings') assert.equal(await admin.getByText('MAINTENANCE MODE', { exact: true }).count(), 0);
+  }
+  await admin.goBack();
+  await admin.waitForURL('**/admin/settings');
+  await admin.getByRole('heading', { name: 'Pengaturan Sistem', exact: true }).waitFor();
+  await admin.reload();
+  await admin.getByRole('heading', { name: 'Pengaturan Sistem', exact: true }).waitFor();
+  await admin.route('**/api/endpoints', route => route.fulfill({ json: [] }));
+  await admin.goto(baseURL + '/?tab=docs');
+  const categories = admin.getByRole('group', { name: 'Kategori endpoint' });
+  await categories.waitFor();
+  await admin.setViewportSize({ width: 320, height: 850 });
+  assert.equal(await categories.evaluate(el => el.scrollWidth > el.clientWidth), true, 'categories scroll horizontally');
+  const rows = await categories.getByRole('button').evaluateAll(buttons => buttons.map(button => Math.round(button.getBoundingClientRect().top)));
+  assert.equal(new Set(rows).size, 1, 'category buttons stay on one row');
+  const whatsapp = categories.getByRole('button', { name: 'WHATSAPP', exact: true });
+  await whatsapp.focus();
+  await admin.keyboard.press('Enter');
+  assert.equal(await whatsapp.getAttribute('aria-pressed'), 'true');
+  assert.equal(await categories.evaluate(el => el.scrollLeft > 0), true);
+  assert.equal(await admin.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
+  assert.equal((await admin.title()).includes('RED API'), true);
+  assert.equal((await admin.locator('body').innerText()).includes('RED/API'), false);
+  console.log('PASS admin pages, slide menu, Escape, focus, history, reload, category scrolling and RED API branding');
   await admin.close();
+  const locked = await pageFor();
+  await locked.goto(baseURL + '/admin/users');
+  await locked.getByText('ADMIN CONSOLE TERKUNCI', { exact: true }).waitFor();
+  assert.equal(await locked.getByRole('button', { name: 'Buka menu admin' }).count(), 0);
+  console.log('PASS direct admin URL remains locked without a session');
+  await locked.close();
 
   const callback = await pageFor();
   await callback.goto(baseURL + '/auth/callback');

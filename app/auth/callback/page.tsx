@@ -77,7 +77,7 @@ export default function AuthCallbackPage() {
               MEMVERIFIKASI AKUN GOOGLE...
             </div>
             <p className="text-zinc-500 text-[11px]">
-              Menghubungkan sesi ke cluster RED/API. Mohon tunggu sebentar.
+              Menghubungkan sesi ke cluster RED API. Mohon tunggu sebentar.
             </p>
           </div>
         )}

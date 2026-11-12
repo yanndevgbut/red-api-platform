@@ -196,7 +196,7 @@ export default function Drawer({
 
         {/* Footer */}
         <div className="p-5 border-t border-surface-border bg-surface/50 text-xs font-mono-code text-zinc-500 flex flex-wrap gap-2 justify-between items-center">
-          <span>RED/API INFRASTRUCTURE</span>
+          <span>RED API INFRASTRUCTURE</span>
           <span className="text-red-500 font-bold">2026</span>
         </div>
       </aside>

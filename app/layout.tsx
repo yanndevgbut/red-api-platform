@@ -19,7 +19,7 @@ const plusJakartaSans = Plus_Jakarta_Sans({
 });
 
 export const metadata: Metadata = {
-  title: "RED/API — High Velocity REST API Platform",
+  title: "RED API — High Velocity REST API Platform",
   description: "Enterprise REST API Gateway running on distributed Pterodactyl Node with AI, Media Scraping, and Stalker services.",
   icons: {
     icon: "/favicon.ico",

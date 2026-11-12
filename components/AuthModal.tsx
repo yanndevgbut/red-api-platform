@@ -139,7 +139,7 @@ export default function AuthModal({ isOpen, onClose, reason }: AuthModalProps) {
           </button>
 
           <p className="text-[10px] text-zinc-500 font-mono-code text-center">
-            Dengan masuk, Anda menyetujui Ketentuan Layanan & Kebijakan Kuota RED/API.
+            Dengan masuk, Anda menyetujui Ketentuan Layanan & Kebijakan Kuota RED API.
           </p>
         </div>
 

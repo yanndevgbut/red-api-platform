@@ -1,4 +1,4 @@
-# RED/API
+# RED API
 
 Portal Next.js untuk dokumentasi, playground, akun, dan admin. Node Express berada di `backend/` dan memakai Supabase untuk autentikasi API key, kuota, dan log.
 
@@ -60,3 +60,8 @@ npm run test:browser
 ```
 
 Uji browser memakai data provider tiruan untuk memeriksa error, timeout, retry, data kedaluwarsa, konsol admin, callback OAuth tanpa sesi, dan overflow pada 320/360/768 piksel. Uji ini tidak membuktikan login Google atau migrasi produksi sudah aktif.
+
+
+## Halaman admin
+
+Admin menggunakan URL terpisah: `/admin/endpoints` (registry), `/admin/new-endpoint` (form pendaftaran), `/admin/users`, `/admin/logs`, dan `/admin/settings` (maintenance). `/admin` serta navigasi admin lama diarahkan ke registry. Gunakan menu hamburger di judul halaman untuk berpindah fitur. Setiap halaman tetap memerlukan profil administrator aktif; akses data dan perubahan tetap dibatasi policy Supabase. Sidebar menggunakan dialog modal, animasi slide, dukungan Escape/fokus keyboard, serta preferensi reduced motion.

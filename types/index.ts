@@ -65,3 +65,13 @@ export interface TelemetryData {
   };
   timestamp: string;
 }
+
+export interface ApiLog {
+  id: number;
+  created_at: string;
+  ip_address: string;
+  method: string;
+  endpoint_path: string;
+  status_code: number;
+  latency_ms: number;
+}

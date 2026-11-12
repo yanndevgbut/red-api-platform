@@ -41,9 +41,9 @@ router.get('/stats', (req, res) => {
 
   res.json({
     status: true,
-    creator: 'RED/API Engine',
+    creator: 'RED API Engine',
     data: {
-      node: process.env.NODE_NAME || 'RED/API',
+      node: process.env.NODE_NAME || 'RED API',
       platform: os.platform() + ' ' + os.arch(),
       node_version: process.version,
       cpu: {

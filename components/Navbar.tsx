@@ -64,7 +64,7 @@ export default function Navbar({
             </div>
             <div className="flex flex-col">
               <span className="font-bebas text-2xl tracking-wider leading-none text-white flex items-center gap-1">
-                RED<span className="text-red-600">/API</span>
+                RED<span className="text-red-600"> API</span>
               </span>
               <span className="text-[9px] font-mono-code text-surface-muted tracking-widest leading-none">V2.4 PRODUCTION</span>
             </div>

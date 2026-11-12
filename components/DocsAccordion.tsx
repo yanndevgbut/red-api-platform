@@ -170,13 +170,13 @@ export default function DocsAccordion({ defaultKey }: { defaultKey?: string }) {
       </div>
 
       {/* Category Pills */}
-      <div className="flex flex-wrap gap-2 items-center">
+      <div role="group" aria-label="Kategori endpoint" className="flex w-full min-w-0 flex-nowrap gap-2 overflow-x-auto overscroll-x-contain pb-3 pt-1 snap-x snap-proximity">
         {categories.map((cat) => (
           <button
             key={cat}
-            onClick={() => setSelectedCat(cat)}
+            onClick={event => { setSelectedCat(cat); event.currentTarget.scrollIntoView({ behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "instant" : "smooth", block: "nearest", inline: "nearest" }); }}
             aria-pressed={selectedCat === cat}
-            className={`px-3 py-1.5 rounded text-xs font-mono-code transition-all ${
+            className={`shrink-0 snap-start whitespace-nowrap px-3 py-2 rounded text-xs font-mono-code transition-all ${
               selectedCat === cat
                 ? "bg-red-600 text-black font-bold shadow-[0_0_12px_rgba(220,38,38,0.4)]"
                 : "bg-surface-card text-zinc-400 border border-surface-border hover:border-zinc-500"
