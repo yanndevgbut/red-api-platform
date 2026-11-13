@@ -64,6 +64,32 @@ try {
   assert.equal(idor.status(), 403);
   assert.equal((await member.request.get(base + '/api/admin/users')).status(), 401);
   console.log('PASS member/forged admin cookie redirects, delayed auth has no login flash, IDOR denied and username XSS escaped');
+  let displayedKey = { id: 'test-key-old', user_id: ids['member-token'], key: 'red_live_old_member', is_active: true, created_at: new Date().toISOString() };
+  let rotationMode = 'success';
+  await member.route('**/api/user', route => route.fulfill({ json: { profile: profile('member-token'), apiKey: displayedKey } }));
+  await member.route('**/api/user/api-key/rotate', route => {
+    assert.equal(route.request().headers().authorization, 'Bearer member-token');
+    if (rotationMode === 'failed') return route.fulfill({ status: 503, json: { error: 'Rotasi gagal untuk pengujian.' } });
+    if (rotationMode === 'wrong-owner') return route.fulfill({ json: { apiKey: { ...displayedKey, user_id: ids['test-token'], key: 'not_our_key' } } });
+    displayedKey = { ...displayedKey, id: 'test-key-new', key: 'red_live_new_member' };
+    return route.fulfill({ json: { apiKey: displayedKey } });
+  });
+  await member.goto(base + '/?tab=profile');
+  const keyField = member.getByRole('textbox', { name: 'API key', exact: true });
+  await keyField.waitFor(); assert.equal(await keyField.inputValue(), 'red_live_old_member');
+  member.once('dialog', dialog => dialog.accept());
+  await member.getByRole('button', { name: 'REGENERATE API KEY', exact: true }).click();
+  await member.getByText('API key baru dibuat. Semua key lama sudah dinonaktifkan.', { exact: true }).waitFor();
+  assert.equal(await keyField.inputValue(), 'red_live_new_member');
+  rotationMode = 'failed'; member.once('dialog', dialog => dialog.accept());
+  await member.getByRole('button', { name: 'REGENERATE API KEY', exact: true }).click();
+  await member.getByText('Rotasi gagal untuk pengujian.', { exact: true }).waitFor();
+  await member.waitForFunction(() => document.querySelector('input[aria-label="API key"]')?.value === 'red_live_new_member');
+  rotationMode = 'wrong-owner'; member.once('dialog', dialog => dialog.accept());
+  await member.getByRole('button', { name: 'REGENERATE API KEY', exact: true }).click();
+  await member.getByText('Respons API key tidak valid.', { exact: true }).waitFor();
+  await member.waitForFunction(() => document.querySelector('input[aria-label="API key"]')?.value === 'red_live_new_member');
+  console.log('PASS key rotation updates the vault, errors recover state and foreign-account keys are rejected');
   await member.close();
 
   const admin = await newPage('test-token', 1280);

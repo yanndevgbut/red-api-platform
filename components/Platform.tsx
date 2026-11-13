@@ -331,7 +331,7 @@ export default function Platform({ initialTab = "landing", adminSection }: { ini
                 </button>
               </div>
             ) : (
-              <UserDashboard user={currentUser} apiKey={currentKey} onRefresh={() => { setApiKey(null); setRefresh(value => value + 1); }} />
+              <UserDashboard accessToken={session?.access_token ?? ""} user={currentUser} apiKey={currentKey} onKeyRotated={key => { setApiKey(key); setRefresh(value => value + 1); }} onRefresh={() => { setApiKey(null); setRefresh(value => value + 1); }} />
             )}
           </section>
         )}

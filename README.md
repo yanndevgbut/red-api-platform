@@ -118,3 +118,12 @@ Request provider memakai origin tetap, timeout 15 detik, tanpa meneruskan API ke
 curl -H "x-api-key: YOUR_KEY" \
   "https://api.redapi.my.id/api/stalk/ff?uid=12345678"
 ```
+
+
+## Revoke / regenerasi API key pengguna
+
+Dashboard memakai `POST /api/user/api-key/rotate`, diteruskan ke backend dengan Bearer token sesi. User ID tidak diterima dari pemanggil: identitas diverifikasi lewat Supabase Auth, profil harus aktif, dan request bersamaan untuk akun yang sama ditolak dengan `409`. Key baru langsung diterapkan ke state dashboard lalu akun disinkronkan kembali. Respons berisi key hanya untuk pemilik akun dan memakai `private, no-store`.
+
+Backend memprioritaskan RPC `rotate_my_api_key()` yang berjalan dalam transaksi dengan row lock. Jika RPC belum terpasang (`PGRST202`), deployment panel satu proses dapat memakai compatibility mode: seluruh key aktif milik akun dinonaktifkan dan satu key baru ditambahkan melalui **satu bulk upsert PostgREST**, sehingga kegagalan statement tidak meninggalkan perubahan sebagian. Tidak ada request revoke dan insert yang terpisah. Akun dengan nol key juga bisa membuat key pengganti. Error otorisasi RPC tidak memicu fallback.
+
+Pasang `backend/lib/user-client.js`, `backend/lib/rotate-api-key.js`, `backend/routes/user.js`, serta mounting router user sebelum maintenance pada `backend/server.js`. Untuk deployment beberapa proses/instance atau pemanggil RPC langsung, terapkan `supabase/migrations/20261113010000_restore_key_rotation.sql` melalui SQL Editor agar serialisasi lintas-instance dijamin database. Migrasi ini tidak membutuhkan pgcrypto untuk pembuatan key. Compatibility mode dibatasi maksimal 100 key aktif per akun dan menolak snapshot yang terpotong.

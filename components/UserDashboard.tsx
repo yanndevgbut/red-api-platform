@@ -3,15 +3,16 @@
 import React, { useState } from "react";
 import { Profile, ApiKey } from "@/types";
 import { Eye, EyeOff, Copy, RefreshCw, Check } from "lucide-react";
-import { getSupabase } from "@/lib/supabase";
 
 interface UserDashboardProps {
   user: Profile | null;
   apiKey: ApiKey | null;
   onRefresh: () => void;
+  onKeyRotated: (key: ApiKey) => void;
+  accessToken: string;
 }
 
-export default function UserDashboard({ user, apiKey, onRefresh }: UserDashboardProps) {
+export default function UserDashboard({ user, apiKey, onRefresh, onKeyRotated, accessToken }: UserDashboardProps) {
   const [showKey, setShowKey] = useState(false);
   const [copied, setCopied] = useState(false);
   const [regenerating, setRegenerating] = useState(false);
@@ -34,13 +35,20 @@ export default function UserDashboard({ user, apiKey, onRefresh }: UserDashboard
     setRegenerating(true);
     setFeedback("");
     try {
-      const { error } = await getSupabase().rpc("rotate_my_api_key");
-      if (error) throw error;
+      if (!accessToken) throw new Error("Sesi sudah tidak valid. Silakan login kembali.");
+      const response = await fetch("/api/user/api-key/rotate", {
+        method: "POST", headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" },
+        body: "{}", signal: AbortSignal.timeout(22000),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Gagal mengganti API key.");
+      if (data.apiKey?.user_id !== user.id || typeof data.apiKey?.key !== "string" || data.apiKey.is_active !== true) throw new Error("Respons API key tidak valid.");
+      onKeyRotated(data.apiKey);
       setShowKey(false);
+      setFeedback("API key baru dibuat. Semua key lama sudah dinonaktifkan.");
+    } catch (error) {
       onRefresh();
-      setFeedback("API key baru dibuat.");
-    } catch {
-      setFeedback("Gagal membuat API key baru. Silakan coba lagi.");
+      setFeedback(error instanceof Error ? error.message : "Gagal mengganti API key. Silakan coba lagi.");
     } finally {
       setRegenerating(false);
     }

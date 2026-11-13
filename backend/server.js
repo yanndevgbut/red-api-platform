@@ -11,6 +11,7 @@ const systemRouter = require('./routes/system');
 const downloaderRouter = require('./routes/downloader');
 const stalkerRouter = require('./routes/stalker');
 const categoriesRouter = require('./routes/categories');
+const userRouter = require('./routes/user');
 const adminRouter = require('./routes/admin');
 
 const app = express();
@@ -40,6 +41,7 @@ app.use(express.json({ limit: '16kb' }));
 app.use(express.urlencoded({ extended: false, limit: '16kb' }));
 app.use(requestLogger);
 app.use('/api', categoriesRouter);
+app.use('/api/user', userRouter);
 app.use(checkMaintenance);
 
 // Root Info

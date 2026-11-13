@@ -76,5 +76,15 @@ test('migrations: registry authorization, account isolation, rotation and signup
   assert.equal((await db.query('UPDATE profiles SET banned=false RETURNING id')).rows.length, 0, 'banned admin cannot unban themselves through RLS');
   await assert.rejects(db.exec('SELECT reset_daily_limits()'), /permission denied/);
   await assert.rejects(db.query('SELECT * FROM deduct_user_quota($1)', [key]), /permission denied/);
+  await db.exec('RESET ROLE; DROP FUNCTION public.rotate_my_api_key();');
+  const rotationMigration = await readFile(new URL('../supabase/migrations/20261113010000_restore_key_rotation.sql', import.meta.url), 'utf8');
+  await db.exec(rotationMigration); await db.exec(rotationMigration);
+  const priorKey = (await db.query('SELECT key FROM api_keys WHERE user_id=$1 AND is_active', [first])).rows[0].key;
+  await db.exec(`SET ROLE authenticated; SELECT set_config('request.jwt.claim.sub', '${first}', false); SELECT rotate_my_api_key(); RESET ROLE;`);
+  const ownKeys = (await db.query('SELECT key, is_active FROM api_keys WHERE user_id=$1', [first])).rows;
+  assert.equal(ownKeys.filter(row => row.is_active).length, 1);
+  assert.equal(ownKeys.find(row => row.key === priorKey).is_active, false);
+  await db.exec(`SET ROLE authenticated; SELECT set_config('request.jwt.claim.sub', '${admin}', false);`);
+  await assert.rejects(db.exec('SELECT rotate_my_api_key()'), /active account/);
   await db.close();
 });
