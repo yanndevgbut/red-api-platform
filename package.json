@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "test:security": "node --test tests/security.test.mjs tests/backend-routes.test.cjs tests/categories.test.cjs tests/tiktokio.test.cjs tests/admin-security.test.cjs tests/stalk-ff.test.cjs tests/key-rotation.test.cjs",
+    "test:security": "node --test tests/security.test.mjs tests/backend-routes.test.cjs tests/categories.test.cjs tests/tiktokio.test.cjs tests/admin-security.test.cjs tests/stalk-ff.test.cjs tests/key-rotation.test.cjs tests/portal.test.cjs",
     "test:browser": "node tests/panels.browser.mjs"
   },
   "dependencies": {

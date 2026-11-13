@@ -1,7 +1,7 @@
 "use client";
 import type { Profile } from "@/types";
-export default function UserManagement({ users, updateUserRole, updateUserPlan, toggleBanUser }: {
-  users: Profile[]; updateUserRole: (id: string, role: Profile["role"]) => void;
+export default function UserManagement({ busy, deleteUser, users, updateUserRole, updateUserPlan, toggleBanUser }: {
+  busy: boolean; deleteUser: (id: string) => void; users: Profile[]; updateUserRole: (id: string, role: Profile["role"]) => void;
   updateUserPlan: (id: string, plan: Profile["plan"]) => void; toggleBanUser: (id: string, banned: boolean) => void;
 }) {
   return (
@@ -37,6 +37,7 @@ export default function UserManagement({ users, updateUserRole, updateUserPlan, 
                       <td className="p-3 text-zinc-400">{u.email}</td>
                       <td className="p-3">
                         <select
+                          disabled={busy}
                           value={u.role}
                           onChange={(e) => updateUserRole(u.id, e.target.value as Profile["role"])}
                           className="bg-surface-card border border-surface-border px-1.5 py-0.5 rounded text-[11px] text-zinc-300"
@@ -47,6 +48,7 @@ export default function UserManagement({ users, updateUserRole, updateUserPlan, 
                       </td>
                       <td className="p-3">
                         <select
+                          disabled={busy}
                           value={u.plan}
                           onChange={(e) => updateUserPlan(u.id, e.target.value as Profile["plan"])}
                           className="bg-surface-card border border-surface-border px-1.5 py-0.5 rounded text-[11px] text-zinc-300"
@@ -67,11 +69,13 @@ export default function UserManagement({ users, updateUserRole, updateUserPlan, 
                       </td>
                       <td className="p-3 text-right">
                         <button
+                          disabled={busy || u.role === "admin"}
                           onClick={() => toggleBanUser(u.id, u.banned)}
                           className="px-2 py-1 bg-surface-card border border-surface-border rounded text-[10px] text-zinc-300 hover:text-white"
                         >
                           {u.banned ? "UNBAN" : "BAN"}
                         </button>
+                        <button disabled={busy || u.role === "admin"} onClick={() => deleteUser(u.id)} className="ml-2 rounded border border-red-900 px-2 py-1 text-[10px] text-red-400 disabled:opacity-30">DELETE</button>
                       </td>
                     </tr>
                   ))

@@ -1,4 +1,6 @@
 export const adminSections = [
+  { id: "announcements", title: "Pengumuman", description: "Terbitkan informasi, atur kedaluwarsa, dan lihat riwayat pop up.", icon: "announcements" },
+  { id: "payments", title: "Pembayaran", description: "Atur QRIS dan tinjau bukti pembayaran paket.", icon: "payments" },
   { id: "endpoints", title: "Endpoint Registry", description: "Kelola endpoint yang terdaftar di katalog.", icon: "registry" },
   { id: "new-endpoint", title: "Tambah Endpoint", description: "Daftarkan endpoint baru ke katalog API.", icon: "add" },
   { id: "categories", title: "Kategori", description: "Tambahkan kategori untuk katalog dan endpoint.", icon: "categories" },

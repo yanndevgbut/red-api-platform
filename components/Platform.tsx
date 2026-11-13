@@ -5,7 +5,10 @@ import { BrandWordmark } from "@/components/BrandLogo";
 import PageLoading from "@/components/PageLoading";
 import Navbar from "@/components/Navbar";
 import Drawer from "@/components/Drawer";
-import MaintenanceBanner from "@/components/MaintenanceBanner";
+import ActionModal from "@/components/ActionModal";
+import PortalNotices from "@/components/PortalNotices";
+import { usePollingResource } from "@/lib/use-polling-resource";
+import type { PortalState } from "@/lib/portal-client";
 import TelemetryWidget from "@/components/TelemetryWidget";
 import CodeSnippet from "@/components/CodeSnippet";
 import DocsAccordion from "@/components/DocsAccordion";
@@ -24,6 +27,8 @@ const AdminConsole = dynamic(() => import("@/components/AdminConsole"), { ssr: f
 
 export default function Platform({ initialTab = "landing", adminSection }: { initialTab?: string; adminSection?: AdminSection }) {
   const router = useRouter();
+  const fetchPortal = React.useCallback(async (signal: AbortSignal): Promise<PortalState> => { const response = await fetch("/api/portal/state", {signal,cache:"no-store"}); if (!response.ok) throw new Error("Status layanan belum dapat dimuat."); return response.json(); }, []);
+  const portal = usePollingResource(fetchPortal, 5000);
   const [activeTab, setActiveTab] = useState(initialTab);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [user, setUser] = useState<Profile | null>(null);
@@ -173,10 +178,12 @@ export default function Platform({ initialTab = "landing", adminSection }: { ini
     </div>;
   }
 
+  if (!canAdmin && !portal.data && !portal.error) return <PageLoading message="Memeriksa status layanan..." />;
+  if (!canAdmin && (portal.error || portal.data?.maintenance.active)) return <><ActionModal title={portal.error ? "Layanan belum tersedia" : "Sedang maintenance"}><p className="text-sm leading-relaxed text-zinc-300">{portal.error || portal.data?.maintenance.message}</p><div className="mt-5 flex flex-wrap gap-3"><button className="rounded-lg border border-zinc-600 px-4 py-2" onClick={portal.reload}>Periksa kembali</button>{!session && <button className="rounded-lg bg-red-600 px-4 py-2" onClick={() => setAuthModalOpen(true)}>Login</button>}{session && <button className="rounded-lg border border-zinc-600 px-4 py-2" onClick={handleLogout}>Keluar akun</button>}</div></ActionModal><AuthModal isOpen={authModalOpen} onClose={() => setAuthModalOpen(false)} reason="Login ke akun RED API" /></>;
+
   return (
     <>
-      {/* Maintenance alert top */}
-      <MaintenanceBanner />
+      {portal.data && activeTab !== "admin" && <PortalNotices state={portal.data} identity={session?.user.id || "guest"} />}
 
       {/* Navigation Header */}
       <Navbar
@@ -301,7 +308,7 @@ export default function Platform({ initialTab = "landing", adminSection }: { ini
         {/* VIEW 3: PRICING (Public) */}
         {activeTab === "pricing" && (
           <section className="animate-fade-in">
-            <PricingTiers />
+            <PricingTiers loggedIn={!!session} qrisReady={!!portal.data?.qrisReady} onLogin={() => {setAuthReason("Login untuk membeli paket dan mengirim bukti pembayaran.");setAuthModalOpen(true);}} />
           </section>
         )}
 

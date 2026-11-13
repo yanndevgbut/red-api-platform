@@ -363,7 +363,7 @@ export default function DocsAccordion({ defaultKey }: { defaultKey?: string }) {
                           )}
                         </button>
 
-                        {resData && (
+                        {resData && !isSubmitting && (
                           <div className="flex items-center gap-3 text-xs font-mono-code">
                             <span
                               className={`px-2 py-0.5 rounded text-[10px] font-bold ${
@@ -385,7 +385,7 @@ export default function DocsAccordion({ defaultKey }: { defaultKey?: string }) {
                       <div className="space-y-1.5 pt-2">
                         <div className="flex flex-wrap gap-2 items-center justify-between text-xs font-mono-code text-zinc-400">
                           <span>LIVE RESPONSE OUTPUT:</span>
-                          {resData && (
+                          {resData && !isSubmitting && (
                             <button
                               onClick={() => copyResponse(ep.id, resData.body)}
                               className="text-[11px] text-zinc-400 hover:text-white flex items-center gap-1"
@@ -405,14 +405,14 @@ export default function DocsAccordion({ defaultKey }: { defaultKey?: string }) {
                           )}
                         </div>
 
-                        <div className="bg-black/95 border border-surface-border rounded-lg p-3.5 font-mono-code text-xs text-zinc-300 min-h-[140px] max-h-[300px] overflow-auto">
-                          <pre className="whitespace-pre-wrap break-words">
+                        <div aria-busy={isSubmitting} className="bg-black/95 border border-surface-border rounded-lg p-3.5 font-mono-code text-xs text-zinc-300 min-h-[140px] max-h-[300px] overflow-auto">
+                          {isSubmitting ? <div role="status" aria-live="polite" className="space-y-4 py-3"><div className="flex items-center gap-3 text-red-400"><span className="h-5 w-5 animate-spin motion-reduce:animate-none rounded-full border-2 border-red-900 border-t-red-400" />Menjalankan endpoint, menunggu respons...</div><div aria-hidden="true" className="space-y-2 motion-safe:animate-pulse"><div className="h-2 w-4/5 rounded bg-zinc-800" /><div className="h-2 w-3/5 rounded bg-zinc-800" /><div className="h-2 w-2/5 rounded bg-zinc-800" /></div></div> : <pre className="whitespace-pre-wrap break-words">
                             <code>
                               {resData
                                 ? JSON.stringify(resData.body, null, 2)
                                 : '// Klik "EXECUTE REQUEST" untuk mengirim request nyata ke node Pterodactyl...'}
                             </code>
-                          </pre>
+                          </pre>}
                         </div>
                       </div>
 

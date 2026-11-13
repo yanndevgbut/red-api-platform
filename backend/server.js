@@ -25,7 +25,7 @@ app.use((_req, res, next) => {
   next();
 });
 
-app.use(cors({ origin: config.corsOrigins, allowedHeaders: ['Content-Type', 'x-api-key', 'Authorization'] }));
+app.use(cors({ origin: config.corsOrigins, allowedHeaders: ['Content-Type', 'x-api-key', 'Authorization', 'X-Confirm-Action', 'X-Confirm-Target'] }));
 
 // Health Check (Always 200 OK)
 app.get('/health', (req, res) => {
@@ -37,6 +37,7 @@ app.get('/health', (req, res) => {
 });
 
 app.use(rateLimit());
+app.use('/api/portal', require('./routes/portal'));
 app.use(express.json({ limit: '16kb' }));
 app.use(express.urlencoded({ extended: false, limit: '16kb' }));
 app.use(requestLogger);

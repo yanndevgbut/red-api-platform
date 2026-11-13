@@ -10,7 +10,7 @@ router.get('/ff', (req, res, next) => {
   if (req.query.apikey !== undefined && (typeof req.query.apikey !== 'string' || (req.get('x-api-key') && req.query.apikey !== req.get('x-api-key')))) return res.status(401).json({ status: false, code: 401, message: 'Gunakan satu API key yang valid.' });
   if (typeof key !== 'string' || key.length > 128 || !/^[a-z0-9_-]+$/i.test(key)) return res.status(401).json({ status: false, code: 401, message: 'API key diperlukan melalui header x-api-key.' });
   next();
-}, authorize, async (req, res) => {
+}, require('../middleware/entitlement'), authorize, async (req, res) => {
   try {
     const result = await lookup(req.query.uid);
     res.json({ status: true, creator: 'RED API Engine', user_plan: req.apiUser.plan, quota_remaining: req.apiUser.remaining, result });

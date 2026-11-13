@@ -1,148 +1,265 @@
 "use client";
-
-import React from "react";
-import { Check, X } from "lucide-react";
-
-export default function PricingTiers() {
-  const plans = [
-    {
-      name: "FREE TIER",
-      tag: "STARTER",
-      price: "RP 0",
-      period: "Selamanya gratis",
-      isFeatured: false,
-      btnLabel: "CURRENT PLAN",
-      btnClass: "border border-surface-border hover:border-zinc-500 text-white",
-      features: [
-        { text: "100 Request / Hari", available: true },
-        { text: "Akses Basic Endpoints", available: true },
-        { text: "Shared Rate-limiting", available: true },
-        { text: "Akses AI & VIP Scraper", available: false },
-        { text: "Dedicated Node Bandwidth", available: false },
-      ],
-    },
-    {
-      name: "BASIC PLAN",
-      tag: "POPULAR",
-      price: "RP 25.000",
-      period: "/ Bulan aktif",
-      isFeatured: false,
-      btnLabel: "UPGRADE BASIC",
-      btnClass: "bg-zinc-800 hover:bg-zinc-700 text-white",
-      features: [
-        { text: "3,000 Request / Hari", available: true },
-        { text: "Akses Full Tools & Stalker", available: true },
-        { text: "Fast Response Node", available: true },
-        { text: "Reset Kuota Tiap 00:00 WIB", available: true },
-        { text: "Priority VIP Support", available: false },
-      ],
-    },
-    {
-      name: "VIP PLAN",
-      tag: "MOST CHOICE",
-      price: "RP 50.000",
-      period: "/ Bulan aktif",
-      isFeatured: true,
-      btnLabel: "GET VIP NOW",
-      btnClass: "bg-red-600 hover:bg-red-500 text-black font-bebas text-2xl tracking-wider active:scale-95",
-      features: [
-        { text: "15,000 Request / Hari", available: true },
-        { text: "Akses ALL AI Models & Scrapers", available: true },
-        { text: "High Concurrency (No 429)", available: true },
-        { text: "WhatsApp Bot Ready", available: true },
-        { text: "Telegram VIP Lounge", available: true },
-      ],
-    },
-    {
-      name: "ENTERPRISE",
-      tag: "UNLIMITED",
-      price: "RP 150.000",
-      period: "/ Bulan aktif",
-      isFeatured: false,
-      btnLabel: "CONTACT ENTERPRISE",
-      btnClass: "border border-red-700 text-red-400 hover:bg-red-950/40",
-      features: [
-        { text: "UNLIMITED Requests / Hari", available: true },
-        { text: "Dedicated Pterodactyl Sub-Node", available: true },
-        { text: "Custom Endpoint Request", available: true },
-        { text: "99.99% Guaranteed SLA", available: true },
-        { text: "1-on-1 Direct Admin Support", available: true },
-      ],
-    },
-  ];
-
+import { useCallback, useEffect, useState } from "react";
+import ActionModal from "./ActionModal";
+import PrivateImage from "./PrivateImage";
+import {
+  imageFile,
+  money,
+  portalRequest,
+  type Order,
+} from "@/lib/portal-client";
+const plans = [
+  { id: "free", name: "Free", price: 0, daily: 100 },
+  { id: "basic", name: "Basic", price: 25000, daily: 3000 },
+  { id: "vip", name: "VIP", price: 50000, daily: 15000 },
+  { id: "enterprise", name: "Enterprise", price: 150000, daily: 999999 },
+];
+const labels: Record<string, string> = {
+  awaiting_proof: "Menunggu bukti transfer",
+  submitted: "Menunggu persetujuan admin",
+  approving: "Sedang diproses admin",
+  approved: "Disetujui",
+  rejected: "Ditolak",
+  cancelled: "Dibatalkan",
+};
+export default function PricingTiers({
+  loggedIn,
+  qrisReady,
+  onLogin,
+}: {
+  loggedIn: boolean;
+  qrisReady: boolean;
+  onLogin: () => void;
+}) {
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [selected, setSelected] = useState<Order | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const [proof, setProof] = useState<File>();
+  const [expiry, setExpiry] = useState("");
+  const reload = useCallback(async () => {
+    if (!loggedIn) return;
+    try {
+      const data = await portalRequest("orders");
+      setOrders(data.orders);
+      setExpiry(data.subscription?.expiresAt || "");
+      setSelected((previous) =>
+        previous
+          ? data.orders.find((row: Order) => row.id === previous.id) || null
+          : null,
+      );
+    } catch (e) {
+      setError((e as Error).message);
+    }
+  }, [loggedIn]);
+  useEffect(() => {
+    void reload();
+    if (!loggedIn) {
+      setOrders([]);
+      setSelected(null);
+    }
+    const timer = setInterval(() => void reload(), 15000);
+    return () => clearInterval(timer);
+  }, [reload, loggedIn]);
+  async function purchase(plan: string) {
+    if (!loggedIn) {
+      onLogin();
+      return;
+    }
+    setBusy(true);
+    setError("");
+    try {
+      const order = await portalRequest("orders", {
+        method: "POST",
+        body: JSON.stringify({ plan }),
+      });
+      setSelected(order);
+      setProof(undefined);
+      await reload();
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+  async function submitProof() {
+    if (!selected) return;
+    setBusy(true);
+    setError("");
+    try {
+      await portalRequest(`orders/${selected.id}/proof`, {
+        method: "POST",
+        body: JSON.stringify({ image: await imageFile(proof) }),
+      });
+      setProof(undefined);
+      await reload();
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }
   return (
-    <div className="space-y-10">
-      <div className="text-center max-w-2xl mx-auto space-y-3">
-        <h2 className="font-bebas text-5xl sm:text-6xl text-white tracking-wide">
-          SIMPLE, SCALABLE <span className="text-red-600">TIERS</span>
-        </h2>
-        <p className="text-zinc-400 text-sm">
-          Pilih paket sesuai kebutuhan kuota API, traffic bot, atau integrasi aplikasi Anda.
+    <div className="space-y-8">
+      <div className="text-center">
+        <h2 className="font-bebas text-5xl">PILIH PAKET ANDA</h2>
+        <p className="mt-3 text-sm text-zinc-400">
+          Pembayaran QRIS manual. Paket aktif 30 hari setelah disetujui admin.
         </p>
+        {!qrisReady && (
+          <p className="mt-3 text-sm text-amber-300">
+            Pembayaran belum tersedia. Admin sedang menyiapkan QRIS.
+          </p>
+        )}
+        {expiry && (
+          <p className="mt-3 text-sm text-red-300">
+            Paket berbayar aktif hingga{" "}
+            {new Date(expiry).toLocaleString("id-ID")}
+          </p>
+        )}
       </div>
-
-      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-6 items-stretch">
-        {plans.map((p) => (
-          <div
-            key={p.name}
-            className={`bg-surface-panel p-6 rounded-lg flex flex-col justify-between space-y-6 relative transition-all ${
-              p.isFeatured
-                ? "border-2 border-red-600 shadow-[0_0_25px_rgba(220,38,38,0.25)] hover:shadow-[0_0_35px_rgba(220,38,38,0.45)]"
-                : "border border-surface-border hover:border-zinc-600"
-            }`}
+      {error && !selected && (
+        <p role="alert" className="text-sm text-red-400">
+          {error}
+        </p>
+      )}
+      <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-4">
+        {plans.map((plan) => (
+          <article
+            key={plan.id}
+            className="flex min-w-0 flex-col gap-5 rounded-xl border border-surface-border bg-surface-panel p-6"
           >
-            {p.isFeatured && (
-              <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-red-600 text-black text-[10px] font-mono-code font-bold px-3 py-0.5 uppercase tracking-wider rounded">
-                RECOMMENDED
-              </div>
-            )}
-
-            <div className="space-y-4">
-              <div className="flex justify-between items-center pt-1">
-                <span className={`font-bebas text-2xl ${p.isFeatured ? "text-red-500 text-3xl" : "text-zinc-200"}`}>
-                  {p.name}
-                </span>
-                <span
-                  className={`text-[10px] font-mono-code px-2 py-0.5 rounded font-bold uppercase ${
-                    p.isFeatured ? "bg-red-600 text-black" : "bg-zinc-800 text-zinc-400"
-                  }`}
-                >
-                  {p.tag}
-                </span>
-              </div>
-
-              <div>
-                <div className="font-bebas text-5xl text-white">{p.price}</div>
-                <span className="text-xs font-mono-code text-zinc-500">{p.period}</span>
-              </div>
-
-              <ul className="text-xs font-mono-code space-y-2.5 text-zinc-300 border-t border-surface-border pt-4">
-                {p.features.map((f, i) => (
-                  <li
-                    key={i}
-                    className={`flex items-center gap-2 ${f.available ? "text-zinc-300" : "text-zinc-600"}`}
-                  >
-                    {f.available ? (
-                      <Check className="w-3.5 h-3.5 text-red-500" />
-                    ) : (
-                      <X className="w-3.5 h-3.5 text-zinc-700" />
-                    )}
-                    {f.text}
-                  </li>
-                ))}
-              </ul>
-            </div>
-
+            <h3 className="font-bebas text-3xl">{plan.name}</h3>
+            <p className="font-bebas text-4xl">{money(plan.price)}</p>
+            <p className="text-sm text-zinc-400">
+              {plan.price ? "30 hari / persetujuan manual" : "Gratis"}
+            </p>
+            <p className="flex-1 text-sm">
+              {plan.daily.toLocaleString("id-ID")} request / hari
+              <br />
+              <span className="text-xs text-zinc-500">
+                Akses mengikuti persyaratan paket setiap endpoint.
+              </span>
+            </p>
             <button
-              onClick={() => alert(`Redirecting to checkout for ${p.name}...`)}
-              className={`action-button w-full px-2 py-2.5 rounded font-bebas text-xl tracking-wider uppercase transition-colors ${p.btnClass}`}
+              disabled={plan.id === "free" || busy || !qrisReady}
+              onClick={() => void purchase(plan.id)}
+              className="rounded-lg bg-red-600 px-4 py-3 disabled:bg-zinc-800 disabled:text-zinc-500"
             >
-              {p.btnLabel}
+              {plan.id === "free"
+                ? "Paket gratis"
+                : busy
+                  ? "Memproses..."
+                  : `Beli ${plan.name}`}
             </button>
-          </div>
+          </article>
         ))}
       </div>
+      {loggedIn && (
+        <section className="space-y-3">
+          <h3 className="font-bebas text-2xl">RIWAYAT PEMBAYARAN</h3>
+          {!orders.length && (
+            <p className="text-sm text-zinc-500">Belum ada pesanan.</p>
+          )}
+          {orders.map((order) => (
+            <button
+              key={order.id}
+              onClick={() => {
+                setSelected(order);
+                setError("");
+                setProof(undefined);
+              }}
+              className="flex w-full flex-wrap items-center justify-between gap-3 rounded-lg border border-zinc-800 p-4 text-left text-sm"
+            >
+              <span>
+                #{order.reference} · {order.plan} · {money(order.amount)}
+              </span>
+              <span className="text-zinc-400">
+                {labels[order.status] || order.status}
+              </span>
+            </button>
+          ))}
+        </section>
+      )}
+      {selected && (
+        <ActionModal
+          title={`Pembayaran #${selected.reference}`}
+          onClose={
+            busy
+              ? undefined
+              : () => {
+                  setSelected(null);
+                  setError("");
+                }
+          }
+        >
+          <div className="space-y-4 text-sm">
+            <p>
+              {selected.plan.toUpperCase()} · {selected.days} hari ·{" "}
+              <strong>{money(selected.amount)}</strong>
+            </p>
+            <p className="text-amber-300">
+              {labels[selected.status] || selected.status}
+            </p>
+            {selected.status === "awaiting_proof" && (
+              <>
+                <p>
+                  Bayar sesuai nominal melalui QRIS berikut, lalu unggah bukti
+                  transfer. Admin akan memeriksa pembayaran sebelum mengaktifkan
+                  paket.
+                </p>
+                <PrivateImage
+                  path={`orders/${selected.id}/qris`}
+                  alt="QRIS pembayaran"
+                />
+                {selected.paymentNote && (
+                  <p className="whitespace-pre-wrap break-words">
+                    {selected.paymentNote}
+                  </p>
+                )}
+                <label className="block">
+                  Bukti transfer (PNG/JPEG, maksimal 3 MB)
+                  <input
+                    className="mt-2 block w-full text-xs"
+                    type="file"
+                    accept="image/png,image/jpeg"
+                    onChange={(e) => setProof(e.target.files?.[0])}
+                  />
+                </label>
+                <button
+                  disabled={busy || !proof}
+                  onClick={() => void submitProof()}
+                  className="rounded-lg bg-red-600 px-4 py-3 disabled:opacity-40"
+                >
+                  {busy ? "Mengirim..." : "Kirim bukti pembayaran"}
+                </button>
+              </>
+            )}
+            {selected.proofAvailable && (
+              <PrivateImage
+                path={`orders/${selected.id}/proof`}
+                alt="Bukti pembayaran Anda"
+              />
+            )}
+            {selected.reviewerNote && (
+              <p className="break-words">
+                Catatan admin: {selected.reviewerNote}
+              </p>
+            )}
+            {selected.expiresAt && (
+              <p>
+                Aktif hingga{" "}
+                {new Date(selected.expiresAt).toLocaleString("id-ID")}
+              </p>
+            )}
+            {error && (
+              <p role="alert" className="text-red-400">
+                {error}
+              </p>
+            )}
+          </div>
+        </ActionModal>
+      )}
     </div>
   );
 }

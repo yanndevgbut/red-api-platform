@@ -33,7 +33,8 @@ test('admin API rejects members, forged/revoked credentials, banned admins and m
     assert.equal((await req('admin', '/users/1%27%20OR%201=1--', 'PATCH', { role: 'admin' })).status, 400);
     assert.equal((await req('admin', target, 'PATCH', { plan: 'not-a-plan' })).status, 400);
     assert.equal(writes, 0);
-    assert.equal((await req('admin', target, 'PATCH', { banned: true })).status, 200);
+    assert.equal((await req('admin', target, 'PATCH', { banned: true })).status, 400, 'confirmation is required before mutation');
+    assert.equal((await req('admin', target, 'PATCH', { banned: true }, { 'X-Confirm-Action': 'update-user' })).status, 200);
     assert.equal(writes, 1);
     profiles.admin.banned = true;
     assert.equal((await req('admin')).status, 403, 'ban is checked again on every request');

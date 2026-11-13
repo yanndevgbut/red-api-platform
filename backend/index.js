@@ -1,3 +1,4 @@
+require('./lib/billing').startBillingReconciler();
 const app = require('./server');
 const { port } = require('./config');
 

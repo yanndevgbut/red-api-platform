@@ -127,3 +127,28 @@ Dashboard memakai `POST /api/user/api-key/rotate`, diteruskan ke backend dengan 
 Backend memprioritaskan RPC `rotate_my_api_key()` yang berjalan dalam transaksi dengan row lock. Jika RPC belum terpasang (`PGRST202`), deployment panel satu proses dapat memakai compatibility mode: seluruh key aktif milik akun dinonaktifkan dan satu key baru ditambahkan melalui **satu bulk upsert PostgREST**, sehingga kegagalan statement tidak meninggalkan perubahan sebagian. Tidak ada request revoke dan insert yang terpisah. Akun dengan nol key juga bisa membuat key pengganti. Error otorisasi RPC tidak memicu fallback.
 
 Pasang `backend/lib/user-client.js`, `backend/lib/rotate-api-key.js`, `backend/routes/user.js`, serta mounting router user sebelum maintenance pada `backend/server.js`. Untuk deployment beberapa proses/instance atau pemanggil RPC langsung, terapkan `supabase/migrations/20261113010000_restore_key_rotation.sql` melalui SQL Editor agar serialisasi lintas-instance dijamin database. Migrasi ini tidak membutuhkan pgcrypto untuk pembuatan key. Compatibility mode dibatasi maksimal 100 key aktif per akun dan menolak snapshot yang terpotong.
+
+### Pengumuman dan pembayaran QRIS manual
+
+Admin memiliki halaman **Pengumuman** (terbitkan, kedaluwarsa, riwayat, hapus) dan
+**Pembayaran** (unggah QRIS PNG/JPEG, tinjau bukti, setujui/tolak pesanan).
+Pembelian dinonaktifkan sampai QRIS asli tersimpan. Harga Basic Rp25.000,
+VIP Rp50.000, Enterprise Rp150.000; masa aktif 30 hari sejak persetujuan.
+Harga/kuota/durasi ditentukan server di `backend/lib/billing.js`, bukan dari input browser.
+Perpanjangan paket yang sama menambah masa aktif; perubahan paket memulai 30 hari baru.
+Paket yang kedaluwarsa kembali ke Free, melalui pemeriksaan request dan rekonsiliasi setiap menit.
+Perubahan plan langsung di Manajemen Pengguna merupakan override admin tanpa masa aktif otomatis.
+
+Data pengumuman, pesanan, dan masa aktif tersimpan atomik di `backend/data/operations.json`.
+Gambar tersimpan privat di `backend/data/uploads/`, hanya disajikan setelah verifikasi sesi dan
+kepemilikan/admin. Backup kedua lokasi bersama-sama; jangan timpa direktori `data` saat deploy.
+Implementasi ini untuk satu proses backend pada volume persisten. Untuk beberapa instance,
+pindahkan store/lock dan file ke database/object storage bersama sebelum menambah replika.
+Tidak diperlukan migrasi SQL baru untuk fitur ini.
+
+Maintenance memblokir API bisnis dengan HTTP 503, termasuk ketika status layanan tidak dapat
+diverifikasi. Admin tetap dapat mematikan maintenance. Browser memeriksa status berkala;
+menghapus dialog melalui developer tools tidak membuka konten halaman atau akses API.
+Konfirmasi tindakan destruktif meliputi ban, perubahan role/plan, penghapusan endpoint/akun,
+maintenance, pengumuman, QRIS, dan keputusan pembayaran. Menghapus akun memerlukan ketik
+ulang email; akun sendiri dan akun ber-role admin dilindungi dari penghapusan.

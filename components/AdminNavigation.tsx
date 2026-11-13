@@ -2,10 +2,10 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { ArrowUpRight, List, Menu, Plus, ScrollText, Settings, Tags, Users, X } from "lucide-react";
+import { Megaphone, Wallet, ArrowUpRight, List, Menu, Plus, ScrollText, Settings, Tags, Users, X } from "lucide-react";
 import { adminSections, type AdminSection } from "@/lib/admin-navigation";
 
-const icons = { registry: List, add: Plus, users: Users, logs: ScrollText, settings: Settings, categories: Tags };
+const icons = { announcements: Megaphone, payments: Wallet, registry: List, add: Plus, users: Users, logs: ScrollText, settings: Settings, categories: Tags };
 
 export default function AdminNavigation({ section }: { section: AdminSection }) {
   const dialog = useRef<HTMLDialogElement>(null);

@@ -11,7 +11,7 @@ router.get('/tiktok', (req, res, next) => {
   if (req.query.apikey !== undefined && (typeof req.query.apikey !== 'string' || (req.get('x-api-key') && req.query.apikey !== req.get('x-api-key')))) return res.status(401).json({ status: false, code: 401, message: 'Provide one valid API key.' });
   if (typeof key !== 'string' || key.length > 128 || !/^[a-z0-9_-]+$/i.test(key)) return res.status(401).json({ status: false, code: 401, message: 'Provide a valid API key in the x-api-key header.' });
   next();
-}, authorize, async (req, res) => {
+}, require('../middleware/entitlement'), authorize, async (req, res) => {
   try {
     const result = await tiktokio(req.query.url);
     return res.json({ status: true, creator: 'RED API Engine', user_plan: req.apiUser.plan, quota_remaining: req.apiUser.remaining, result });
