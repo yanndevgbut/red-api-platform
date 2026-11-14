@@ -4,10 +4,12 @@ export default function ActionModal({
   title,
   children,
   onClose,
+  accent = false,
 }: {
   title: string;
   children: ReactNode;
   onClose?: () => void;
+  accent?: boolean;
 }) {
   const ref = useRef<HTMLDialogElement>(null);
   useEffect(() => {
@@ -28,7 +30,7 @@ export default function ActionModal({
         e.preventDefault();
         onClose?.();
       }}
-      className="m-auto w-[calc(100%-2rem)] max-w-lg max-h-[90dvh] overflow-y-auto rounded-2xl border border-zinc-700 bg-zinc-950 p-5 text-zinc-100 shadow-2xl backdrop:bg-black/85"
+      className={`${accent ? "border-2 border-red-600 shadow-[0_0_40px_rgba(220,38,38,0.2)]" : "border border-zinc-700 shadow-2xl"} m-auto w-[calc(100%-2rem)] max-w-lg max-h-[90dvh] overflow-y-auto rounded-2xl bg-zinc-950 p-5 text-zinc-100 backdrop:bg-black/85`}
     >
       <h2 className="mb-4 font-bebas text-3xl break-words">{title}</h2>
       {children}

@@ -26,6 +26,7 @@ type AdminSnapshot = {
   users?: Profile[];
   logs?: ApiLog[];
   maintenance?: boolean;
+  maintenanceMessage?: string;
   categories?: string[];
 };
 
@@ -40,6 +41,7 @@ export default function AdminConsole({ section }: { section: AdminSection }) {
   const [logs, setLogs] = useState<ApiLog[]>([]);
   const [categories, setCategories] = useState<string[]>([]);
   const [maintenance, setMaintenance] = useState(false);
+  const [maintenanceMessage, setMaintenanceMessage] = useState("");
 
   // New endpoint form state
   const [newEp, setNewEp] = useState<EndpointDraft>({
@@ -70,7 +72,11 @@ export default function AdminConsole({ section }: { section: AdminSection }) {
       if (section === "logs")
         return { logs: await adminRequest("logs", { signal }) };
       const settings = await adminRequest("system", { signal });
-      return { maintenance: Boolean(settings.maintenance_mode) };
+      return {
+        maintenance: Boolean(settings.maintenance_mode),
+        maintenanceMessage:
+          settings.maintenance_message || "Layanan sedang dalam pemeliharaan.",
+      };
     },
     [section],
   );
@@ -90,6 +96,8 @@ export default function AdminConsole({ section }: { section: AdminSection }) {
     if (data.users) setUsers(data.users);
     if (data.logs) setLogs(data.logs);
     if (data.maintenance !== undefined) setMaintenance(data.maintenance);
+    if (data.maintenanceMessage !== undefined)
+      setMaintenanceMessage(data.maintenanceMessage);
   }, [data]);
 
   const toggleMaintenance = async () => {
@@ -117,6 +125,34 @@ export default function AdminConsole({ section }: { section: AdminSection }) {
       loadData();
     } catch {
       setIssue("Gagal memperbarui maintenance.");
+    } finally {
+      setBusy(false);
+    }
+  };
+  const saveMaintenanceMessage = async (message: string): Promise<boolean> => {
+    if (
+      busy ||
+      !(await askConfirm({
+        title: "Simpan pesan maintenance?",
+        message: `Pesan ini akan muncul pada pop up saat maintenance aktif:\n\n${message}`,
+      }))
+    )
+      return false;
+    setBusy(true);
+    setIssue("");
+    try {
+      const settings = await adminRequest("maintenance", {
+        method: "POST",
+        headers: { "X-Confirm-Action": "maintenance" },
+        body: JSON.stringify({ message }),
+      });
+      setMaintenanceMessage(settings.maintenance_message);
+      setMaintenance(Boolean(settings.maintenance_mode));
+      loadData();
+      return true;
+    } catch {
+      setIssue("Gagal menyimpan pesan maintenance.");
+      return false;
     } finally {
       setBusy(false);
     }
@@ -337,6 +373,8 @@ export default function AdminConsole({ section }: { section: AdminSection }) {
         {section === "settings" && (
           <SystemSettings
             maintenance={maintenance}
+            message={maintenanceMessage}
+            saveMessage={saveMaintenanceMessage}
             disabled={busy || data?.maintenance === undefined}
             toggleMaintenance={toggleMaintenance}
           />

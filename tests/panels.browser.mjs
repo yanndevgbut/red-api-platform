@@ -154,6 +154,29 @@ try {
   assert.equal(await deleteModal.getByRole('button',{name:'Ya, lanjutkan',exact:true}).isEnabled(),true);
   await admin.keyboard.press('Escape');
   assert.equal(mutations,0);
+  // Message edits are independent of the maintenance switch and survive a refresh while typing.
+  let savedMaintenance={maintenance_mode:false,maintenance_message:'Pesan sebelumnya'};
+  await admin.route('**/api/admin/system',route=>route.fulfill({json:savedMaintenance}));
+  await admin.route('**/api/admin/maintenance',route=>{
+    assert.equal(route.request().headers()['x-confirm-action'],'maintenance');
+    const body=route.request().postDataJSON();
+    if ('message' in body) {assert.equal('active' in body,false);savedMaintenance.maintenance_message=body.message;}
+    if ('active' in body) savedMaintenance.maintenance_mode=body.active;
+    return route.fulfill({json:savedMaintenance});
+  });
+  await admin.goto(base+'/admin/settings');
+  const messageField=admin.getByLabel('Pesan pop up maintenance',{exact:true});
+  await messageField.fill('Maintenance terjadwal\nKami segera kembali.');
+  await admin.getByRole('button',{name:'Coba lagi / Refresh',exact:true}).click();
+  assert.equal(await messageField.inputValue(),'Maintenance terjadwal\nKami segera kembali.');
+  await admin.getByRole('button',{name:'Simpan pesan maintenance',exact:true}).click();
+  const saveDialog=admin.getByRole('dialog',{name:'Simpan pesan maintenance?'});await saveDialog.waitFor();const saveResponse=admin.waitForResponse(r=>r.url().endsWith('/api/admin/maintenance')&&r.request().method()==='POST');await saveDialog.getByRole('button',{name:'Ya, lanjutkan',exact:true}).click();
+  await saveResponse;await saveDialog.waitFor({state:'hidden'});await admin.getByRole('button',{name:'Simpan pesan maintenance',exact:true}).isDisabled();
+  assert.equal(savedMaintenance.maintenance_mode,false);
+  assert.equal(savedMaintenance.maintenance_message,'Maintenance terjadwal\nKami segera kembali.');
+  await admin.getByRole('button',{name:'TOGGLE',exact:true}).click();await admin.getByRole('dialog',{name:'Aktifkan maintenance?'}).getByRole('button',{name:'Ya, lanjutkan',exact:true}).click();
+  await admin.getByText('STATUS: ACTIVE (503)',{exact:true}).waitFor();assert.equal(savedMaintenance.maintenance_message,'Maintenance terjadwal\nKami segera kembali.');
+  console.log('PASS editable maintenance message saves without toggling and toggle preserves saved message');
   console.log('PASS maintenance and account deletion require explicit confirmation; cancel/Escape send no mutations');
 
   // Maintenance is a blocking dialog with no close control; removing it exposes no site content.
@@ -161,7 +184,7 @@ try {
   await blocked.route('**/api/portal/state',route=>route.fulfill({json:{maintenance:{active:true,message:'Pemeliharaan terjadwal'},announcements:[],qrisReady:false,serverTime:new Date().toISOString()}}));
   await blocked.goto(base+'/');
   const maintenanceModal=blocked.getByRole('dialog',{name:'Sedang maintenance'});
-  await maintenanceModal.waitFor();await blocked.keyboard.press('Escape');assert.equal(await maintenanceModal.isVisible(),true);
+  await maintenanceModal.waitFor();assert.equal(await maintenanceModal.evaluate(el=>getComputedStyle(el).borderTopColor),'rgb(220, 38, 38)');await blocked.keyboard.press('Escape');assert.equal(await maintenanceModal.isVisible(),true);
   assert.equal(await blocked.getByRole('button',{name:'Tutup',exact:true}).count(),0);
   await blocked.evaluate(()=>document.querySelector('dialog').remove());
   assert.equal(await blocked.getByText('FAST, RELIABLE',{exact:false}).count(),0);
@@ -219,6 +242,18 @@ try {
   await admin.goto(base+'/admin/payments');await admin.getByRole('button',{name:/TEST0001/}).click();await admin.getByRole('img',{name:'Bukti transfer pelanggan',exact:true}).waitFor();await admin.getByRole('button',{name:'Setujui pembayaran',exact:true}).click();
   const approval=admin.getByRole('dialog',{name:'Setujui pembayaran?'});await approval.waitFor();assert.equal(approvals,0);await approval.getByRole('button',{name:'Ya, lanjutkan',exact:true}).click();await admin.getByRole('dialog',{name:'Pesanan #TEST0001'}).waitFor({state:'hidden'});assert.equal(approvals,1);
   console.log('PASS mobile QRIS checkout, transfer-proof upload and admin approval with confirmation');
+  const vipBuyer=await newPage('member-token',360);
+  await vipBuyer.route('**/api/user',route=>route.fulfill({json:{profile:{...memberProfile,plan:'vip',limit_daily:15000},apiKey:null}}));
+  await vipBuyer.route('**/api/portal/state',route=>route.fulfill({json:{maintenance:{active:false,message:''},announcements:[],qrisReady:true,serverTime:new Date().toISOString()}}));
+  await vipBuyer.route('**/api/portal/orders',route=>{assert.equal(route.request().method(),'GET');return route.fulfill({json:{orders:[],subscription:null,currentPlan:'vip'}});});
+  await vipBuyer.goto(base+'/?tab=pricing');
+  await vipBuyer.getByRole('button',{name:'Paket lebih rendah',exact:true}).waitFor();
+  assert.equal(await vipBuyer.getByRole('button',{name:'Paket lebih rendah',exact:true}).isDisabled(),true);
+  assert.equal(await vipBuyer.getByRole('button',{name:'Beli VIP',exact:true}).isEnabled(),true);
+  assert.equal(await vipBuyer.getByRole('button',{name:'Beli Enterprise',exact:true}).isEnabled(),true);
+  assert.equal(await vipBuyer.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);await vipBuyer.close();
+  console.log('PASS VIP users cannot buy Basic; renewal and upgrades remain enabled');
+
   assert.equal((await admin.request.get(base+'/api/portal/admin/qris')).status(),401);
   assert.equal((await admin.request.get(base+'/api/portal/admin/payment-settings')).status(),401);
   assert.equal((await admin.request.post(base+'/api/portal/orders',{headers:{Origin:'https://evil.example',Authorization:'Bearer member-token'},data:{plan:'basic'}})).status(),403);

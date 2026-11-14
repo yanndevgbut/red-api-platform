@@ -75,8 +75,8 @@ router.get('/system', async (_req, res) => {
 router.post('/maintenance', async (req, res) => {
   if (req.get('x-confirm-action') !== 'maintenance') return fail(res,400,'Konfirmasi diperlukan.');
   const { active, message } = req.body ?? {};
-  if (typeof active !== 'boolean' || (message !== undefined && (typeof message !== 'string' || message.length > 500))) return fail(res, 400, 'Pengaturan tidak valid.');
-  const result = await supabase.from('system_settings').update({ maintenance_mode: active, maintenance_message: message || 'System under scheduled maintenance.', updated_at: new Date().toISOString() }).eq('id', 1).select('maintenance_mode,maintenance_message,updated_at').single();
+  if ((active === undefined && message === undefined) || (active !== undefined && typeof active !== 'boolean') || (message !== undefined && (typeof message !== 'string' || !message.trim() || message.length > 500)) || Object.keys(req.body ?? {}).some(key => !['active','message'].includes(key))) return fail(res, 400, 'Pengaturan tidak valid.');
+  const result = await supabase.from('system_settings').update({ ...(active !== undefined ? { maintenance_mode: active } : {}), ...(message !== undefined ? { maintenance_message: message.trim() } : {}), updated_at: new Date().toISOString() }).eq('id', 1).select('maintenance_mode,maintenance_message,updated_at').single();
   if (!result.error) setMaintenance(result.data);
   return result.error ? fail(res, 503, 'Pengaturan tidak dapat diperbarui.') : res.json(result.data);
 });

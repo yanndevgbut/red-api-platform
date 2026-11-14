@@ -8,7 +8,12 @@ const {
   readImage,
   removeImage,
 } = require('../lib/operations-store');
-const { catalog, audit, ensureEntitlement } = require('../lib/billing');
+const {
+  catalog,
+  audit,
+  ensureEntitlement,
+  permitsPurchase,
+} = require('../lib/billing');
 const { getMaintenance } = require('../lib/maintenance-state');
 const router = express.Router();
 const uuid = (value) => /^[a-f0-9-]{36}$/i.test(value);
@@ -18,12 +23,9 @@ const wrap = (fn) => async (req, res) => {
   try {
     await fn(req, res);
   } catch (error) {
-    res
-      .status(error.status || 503)
-      .json({
-        error:
-          error.userMessage || 'Layanan belum tersedia. Silakan coba lagi.',
-      });
+    res.status(error.status || 503).json({
+      error: error.userMessage || 'Layanan belum tersedia. Silakan coba lagi.',
+    });
   }
 };
 const confirmed = (req, action) => {
@@ -52,6 +54,22 @@ const cleanOrder = (order, admin = false) => ({
       }
     : {}),
 });
+async function purchaseProfile(userId, plan) {
+  const result = await supabase
+    .from('profiles')
+    .select('plan,banned')
+    .eq('id', userId)
+    .maybeSingle();
+  if (result.error) throw new Error('Profile unavailable');
+  if (!result.data || result.data.banned !== false)
+    throw problem(409, 'Akun pelanggan tidak aktif.');
+  if (plan && !permitsPurchase(result.data.plan, plan))
+    throw problem(
+      409,
+      'Paket lebih rendah dari paket aktif Anda. Pilih perpanjangan atau upgrade.',
+    );
+  return result.data;
+}
 async function available() {
   const state = await getMaintenance();
   if (state.active) throw problem(503, state.message);
@@ -136,8 +154,10 @@ router.get(
   wrap(async (req, res) => {
     await available();
     await ensureEntitlement(req.portalUser.id);
+    const profile = await purchaseProfile(req.portalUser.id);
     res.json(
       await withOperations((state) => ({
+        currentPlan: profile.plan,
         orders: state.orders
           .filter((row) => row.userId === req.portalUser.id)
           .slice(-100)
@@ -154,11 +174,14 @@ router.post(
     await available();
     const { plan } = req.body || {};
     if (
+      typeof plan !== 'string' ||
       !Object.hasOwn(catalog, plan) ||
       Object.keys(req.body || {}).some((key) => key !== 'plan')
     )
       throw problem(400, 'Paket tidak valid.');
+    await ensureEntitlement(req.portalUser.id);
     const order = await withOperations(async (state, save) => {
+      await purchaseProfile(req.portalUser.id, plan);
       if (!state.qris?.file) throw problem(503, 'QRIS belum disiapkan admin.');
       await readImage(state.qris.file);
       const pending = state.orders.find(
@@ -201,9 +224,12 @@ router.get(
   '/orders/:id/qris',
   wrap(async (req, res) => {
     await available();
-    const file = await withOperations(
-      (state) => findOrder(state, req).qrisFile,
-    );
+    await ensureEntitlement(req.portalUser.id);
+    const file = await withOperations(async (state) => {
+      const item = findOrder(state, req);
+      await purchaseProfile(req.portalUser.id, item.plan);
+      return item.qrisFile;
+    });
     await sendImage(res, file);
   }),
 );
@@ -211,8 +237,10 @@ router.post(
   '/orders/:id/proof',
   wrap(async (req, res) => {
     await available();
+    await ensureEntitlement(req.portalUser.id);
     const order = await withOperations(async (state, save) => {
       const item = findOrder(state, req);
+      await purchaseProfile(req.portalUser.id, item.plan);
       if (item.status !== 'awaiting_proof')
         throw problem(
           409,
@@ -386,7 +414,16 @@ router.post(
       throw problem(400, 'Isi alasan penolakan (maksimal 500 karakter).');
     const order = await withOperations(async (state, save) => {
       const item = findOrder(state, req, true);
-      if (!['awaiting_proof', 'submitted', 'rejected'].includes(item.status))
+      if (item.status === 'approving') {
+        const profile = await purchaseProfile(item.userId);
+        if (permitsPurchase(profile.plan, item.plan))
+          throw problem(
+            409,
+            'Persetujuan sedang diproses. Lanjutkan persetujuan terlebih dahulu.',
+          );
+      } else if (
+        !['awaiting_proof', 'submitted', 'rejected'].includes(item.status)
+      )
         throw problem(409, 'Pesanan tidak dapat ditolak pada status ini.');
       item.status = 'rejected';
       item.reviewerNote = note.trim();
@@ -420,6 +457,11 @@ router.post(
       if (profile.error) throw new Error('Profile unavailable');
       if (!profile.data || profile.data.banned !== false)
         throw problem(409, 'Akun pelanggan tidak aktif.');
+      if (!permitsPurchase(profile.data.plan, item.plan))
+        throw problem(
+          409,
+          'Persetujuan ditolak: paket pesanan lebih rendah dari paket aktif pelanggan. Tolak pesanan dan tindak lanjuti pembayaran.',
+        );
       if (item.status !== 'approving') {
         const now = Date.now();
         const old = state.subscriptions[item.userId];
@@ -456,7 +498,7 @@ router.post(
           .eq('plan', intent.previousPlan)
           .select('id');
         if (update.error) throw new Error('Plan update failed');
-        if (!update.data?.length && intent.previousPlan !== item.plan)
+        if (!update.data?.length)
           throw problem(
             409,
             'Paket berubah selama persetujuan. Periksa kembali akun pelanggan.',

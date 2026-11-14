@@ -24,13 +24,21 @@ const labels: Record<string, string> = {
 };
 export default function PricingTiers({
   loggedIn,
+  currentPlan,
   qrisReady,
   onLogin,
 }: {
   loggedIn: boolean;
+  currentPlan: string;
   qrisReady: boolean;
   onLogin: () => void;
 }) {
+  const [serverPlan, setServerPlan] = useState<string | null>(null);
+  const rank = plans.findIndex(
+    (plan) => plan.id === (serverPlan || currentPlan),
+  );
+  const lowerPlan = (id: string) =>
+    loggedIn && (rank < 0 || plans.findIndex((plan) => plan.id === id) < rank);
   const [orders, setOrders] = useState<Order[]>([]);
   const [selected, setSelected] = useState<Order | null>(null);
   const [busy, setBusy] = useState(false);
@@ -42,6 +50,7 @@ export default function PricingTiers({
     try {
       const data = await portalRequest("orders");
       setOrders(data.orders);
+      setServerPlan(data.currentPlan || null);
       setExpiry(data.subscription?.expiresAt || "");
       setSelected((previous) =>
         previous
@@ -56,6 +65,7 @@ export default function PricingTiers({
     void reload();
     if (!loggedIn) {
       setOrders([]);
+      setServerPlan(null);
       setSelected(null);
     }
     const timer = setInterval(() => void reload(), 15000);
@@ -64,6 +74,10 @@ export default function PricingTiers({
   async function purchase(plan: string) {
     if (!loggedIn) {
       onLogin();
+      return;
+    }
+    if (lowerPlan(plan)) {
+      setError("Paket lebih rendah dari paket aktif Anda.");
       return;
     }
     setBusy(true);
@@ -142,15 +156,19 @@ export default function PricingTiers({
               </span>
             </p>
             <button
-              disabled={plan.id === "free" || busy || !qrisReady}
+              disabled={
+                plan.id === "free" || busy || !qrisReady || lowerPlan(plan.id)
+              }
               onClick={() => void purchase(plan.id)}
               className="rounded-lg bg-red-600 px-4 py-3 disabled:bg-zinc-800 disabled:text-zinc-500"
             >
               {plan.id === "free"
                 ? "Paket gratis"
-                : busy
-                  ? "Memproses..."
-                  : `Beli ${plan.name}`}
+                : lowerPlan(plan.id)
+                  ? "Paket lebih rendah"
+                  : busy
+                    ? "Memproses..."
+                    : `Beli ${plan.name}`}
             </button>
           </article>
         ))}
@@ -201,40 +219,48 @@ export default function PricingTiers({
             <p className="text-amber-300">
               {labels[selected.status] || selected.status}
             </p>
-            {selected.status === "awaiting_proof" && (
-              <>
-                <p>
-                  Bayar sesuai nominal melalui QRIS berikut, lalu unggah bukti
-                  transfer. Admin akan memeriksa pembayaran sebelum mengaktifkan
-                  paket.
-                </p>
-                <PrivateImage
-                  path={`orders/${selected.id}/qris`}
-                  alt="QRIS pembayaran"
-                />
-                {selected.paymentNote && (
-                  <p className="whitespace-pre-wrap break-words">
-                    {selected.paymentNote}
-                  </p>
-                )}
-                <label className="block">
-                  Bukti transfer (PNG/JPEG, maksimal 3 MB)
-                  <input
-                    className="mt-2 block w-full text-xs"
-                    type="file"
-                    accept="image/png,image/jpeg"
-                    onChange={(e) => setProof(e.target.files?.[0])}
-                  />
-                </label>
-                <button
-                  disabled={busy || !proof}
-                  onClick={() => void submitProof()}
-                  className="rounded-lg bg-red-600 px-4 py-3 disabled:opacity-40"
-                >
-                  {busy ? "Mengirim..." : "Kirim bukti pembayaran"}
-                </button>
-              </>
+            {lowerPlan(selected.plan) && (
+              <p className="text-red-300">
+                Paket pesanan ini lebih rendah dari paket aktif Anda. Pembayaran
+                tidak dapat dilanjutkan. Jika sudah membayar, hubungi admin
+                untuk tindak lanjut.
+              </p>
             )}
+            {selected.status === "awaiting_proof" &&
+              !lowerPlan(selected.plan) && (
+                <>
+                  <p>
+                    Bayar sesuai nominal melalui QRIS berikut, lalu unggah bukti
+                    transfer. Admin akan memeriksa pembayaran sebelum
+                    mengaktifkan paket.
+                  </p>
+                  <PrivateImage
+                    path={`orders/${selected.id}/qris`}
+                    alt="QRIS pembayaran"
+                  />
+                  {selected.paymentNote && (
+                    <p className="whitespace-pre-wrap break-words">
+                      {selected.paymentNote}
+                    </p>
+                  )}
+                  <label className="block">
+                    Bukti transfer (PNG/JPEG, maksimal 3 MB)
+                    <input
+                      className="mt-2 block w-full text-xs"
+                      type="file"
+                      accept="image/png,image/jpeg"
+                      onChange={(e) => setProof(e.target.files?.[0])}
+                    />
+                  </label>
+                  <button
+                    disabled={busy || !proof}
+                    onClick={() => void submitProof()}
+                    className="rounded-lg bg-red-600 px-4 py-3 disabled:opacity-40"
+                  >
+                    {busy ? "Mengirim..." : "Kirim bukti pembayaran"}
+                  </button>
+                </>
+              )}
             {selected.proofAvailable && (
               <PrivateImage
                 path={`orders/${selected.id}/proof`}

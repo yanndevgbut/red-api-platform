@@ -226,7 +226,9 @@ export default function PaymentManager() {
                   : "Setujui pembayaran"}
               </button>
             )}
-            {["awaiting_proof", "submitted"].includes(selected.status) && (
+            {["awaiting_proof", "submitted", "approving"].includes(
+              selected.status,
+            ) && (
               <>
                 <label className="block">
                   Alasan penolakan

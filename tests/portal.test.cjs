@@ -29,7 +29,12 @@ let updates = 0,
   failUpdate = false,
   failSettings = false,
   failDeletion = false;
+let raceUpgrade = false;
 const deleted = [];
+const settings = {
+  maintenance_mode: false,
+  maintenance_message: 'Maintenance',
+};
 const client = require.resolve('../backend/config/supabase');
 require.cache[client] = {
   id: client,
@@ -77,10 +82,7 @@ require.cache[client] = {
           return failSettings
             ? { error: {} }
             : {
-                data: {
-                  maintenance_mode: false,
-                  maintenance_message: 'Maintenance',
-                },
+                data: Object.assign(settings, this.body || {}),
               };
         },
         async maybeSingle() {
@@ -89,6 +91,14 @@ require.cache[client] = {
         then(resolve) {
           if (failUpdate) return resolve({ error: { code: 'FAIL' } });
           const p = profiles[this.filters.id];
+          if (this.body && p && raceUpgrade) {
+            Object.assign(p, {
+              plan: 'enterprise',
+              limit_daily: 999999,
+              limit_remaining: 777777,
+            });
+            raceUpgrade = false;
+          }
           if (
             this.body &&
             p &&
@@ -307,6 +317,256 @@ test('announcements, private receipts, manual approvals, expiry, delete users an
     await billing.ensureEntitlement(ids.member);
     assert.equal(profiles[ids.member].plan, 'free');
     assert.equal(profiles[ids.member].limit_remaining, 80);
+    // Lower tiers are rejected at checkout and for orders created before an upgrade.
+    const legacy = await (
+      await req('other', '/api/portal/orders', 'POST', { plan: 'basic' })
+    ).json();
+    await req('other', `/api/portal/orders/${legacy.id}/proof`, 'POST', {
+      image: png,
+    });
+    Object.assign(profiles[ids.other], {
+      plan: 'vip',
+      limit_daily: 15000,
+      limit_remaining: 12000,
+    });
+    const vipGrant = {
+      plan: 'vip',
+      expiresAt: new Date(Date.now() + 86400000).toISOString(),
+      orderId: 'existing-vip',
+    };
+    await store.withOperations(async (state, save) => {
+      state.subscriptions[ids.other] = vipGrant;
+      await save();
+    });
+    assert.equal(
+      (await req('other', '/api/portal/orders', 'POST', { plan: 'basic' }))
+        .status,
+      409,
+    );
+    assert.equal(
+      (await req('other', `/api/portal/orders/${legacy.id}/qris`)).status,
+      409,
+    );
+    assert.equal(
+      (
+        await req('other', `/api/portal/orders/${legacy.id}/proof`, 'POST', {
+          image: png,
+        })
+      ).status,
+      409,
+    );
+    const legacyApproval = `/api/portal/admin/orders/${legacy.id}/approve`;
+    assert.equal(
+      (await req('admin', legacyApproval, 'POST', {}, 'approve-payment'))
+        .status,
+      409,
+    );
+    await store.withOperations(async (state, save) => {
+      state.orders.find((o) => o.id === legacy.id).status = 'approving';
+      await save();
+    });
+    assert.equal(
+      (await req('admin', legacyApproval, 'POST', {}, 'approve-payment'))
+        .status,
+      409,
+      'recovery of an in-progress old approval cannot downgrade',
+    );
+    assert.equal(profiles[ids.other].plan, 'vip');
+    assert.equal(profiles[ids.other].limit_remaining, 12000);
+    assert.deepEqual(
+      await store.withOperations((state) => state.subscriptions[ids.other]),
+      vipGrant,
+    );
+    assert.equal(
+      (
+        await req(
+          'admin',
+          `/api/portal/admin/orders/${legacy.id}/reject`,
+          'POST',
+          {
+            note: 'Paket pelanggan sudah lebih tinggi. Tindak lanjuti pembayaran.',
+          },
+          'reject-payment',
+        )
+      ).status,
+      200,
+    );
+    assert.equal(
+      (await req('other', '/api/portal/orders', 'POST', { plan: 'vip' }))
+        .status,
+      201,
+      'same-tier renewal remains available',
+    );
+    assert.equal(
+      (await req('other', '/api/portal/orders', 'POST', { plan: 'enterprise' }))
+        .status,
+      201,
+      'upgrades remain available',
+    );
+    profiles[ids.other].plan = 'enterprise';
+    for (const plan of ['basic', 'vip'])
+      assert.equal(
+        (await req('other', '/api/portal/orders', 'POST', { plan })).status,
+        409,
+      );
+    assert.equal(
+      (await req('other', '/api/portal/orders', 'POST', { plan: 'enterprise' }))
+        .status,
+      201,
+    );
+    assert.equal(
+      (await (await req('other', '/api/portal/orders')).json()).currentPlan,
+      'enterprise',
+    );
+    for (const plan of [['basic'], { plan: 'basic' }])
+      assert.equal(
+        (await req('other', '/api/portal/orders', 'POST', { plan })).status,
+        400,
+      );
+    profiles[ids.other].plan = 'unknown';
+    assert.equal(
+      (await req('other', '/api/portal/orders', 'POST', { plan: 'basic' }))
+        .status,
+      503,
+    );
+    profiles[ids.other].plan = 'vip';
+    await store.withOperations(async (state, save) => {
+      state.subscriptions[ids.other] = {
+        ...vipGrant,
+        expiresAt: new Date(Date.now() - 1000).toISOString(),
+      };
+      await save();
+    });
+    assert.equal(
+      (await req('other', '/api/portal/orders', 'POST', { plan: 'basic' }))
+        .status,
+      201,
+      'expired higher-tier subscriptions can buy a lower tier after reverting to Free',
+    );
+    assert.equal(profiles[ids.other].plan, 'free');
+
+    const vipPending = await store.withOperations((state) =>
+      state.orders.find(
+        (order) =>
+          order.userId === ids.other &&
+          order.plan === 'vip' &&
+          order.status === 'awaiting_proof',
+      ),
+    );
+    assert.equal(
+      (
+        await req(
+          'other',
+          `/api/portal/orders/${vipPending.id}/proof`,
+          'POST',
+          { image: png },
+        )
+      ).status,
+      200,
+    );
+    raceUpgrade = true;
+    assert.equal(
+      (
+        await req(
+          'admin',
+          `/api/portal/admin/orders/${vipPending.id}/approve`,
+          'POST',
+          {},
+          'approve-payment',
+        )
+      ).status,
+      409,
+      'a concurrent upgrade must prevent the stale approval write',
+    );
+    assert.equal(profiles[ids.other].plan, 'enterprise');
+    assert.equal(profiles[ids.other].limit_remaining, 777777);
+    assert.equal(
+      await store.withOperations((state) => state.subscriptions[ids.other]),
+      undefined,
+    );
+
+    // Saving a message never toggles maintenance, and toggling preserves the saved text.
+    const maintenancePath = '/api/admin/maintenance';
+    assert.equal(
+      (
+        await req(
+          'member',
+          maintenancePath,
+          'POST',
+          { message: 'forged' },
+          'maintenance',
+        )
+      ).status,
+      403,
+    );
+    for (const message of ['', ' '.repeat(2), 'x'.repeat(501), 123])
+      assert.equal(
+        (
+          await req(
+            'admin',
+            maintenancePath,
+            'POST',
+            { message },
+            'maintenance',
+          )
+        ).status,
+        400,
+      );
+    assert.equal(
+      (
+        await req('admin', maintenancePath, 'POST', {
+          message: 'missing confirmation',
+        })
+      ).status,
+      400,
+    );
+    const custom = '<b>Jadwal perawatan</b>\nSilakan kembali nanti.';
+    let saved = await (
+      await req(
+        'admin',
+        maintenancePath,
+        'POST',
+        { message: custom },
+        'maintenance',
+      )
+    ).json();
+    assert.equal(saved.maintenance_mode, false);
+    assert.equal(saved.maintenance_message, custom);
+    saved = await (
+      await req(
+        'admin',
+        maintenancePath,
+        'POST',
+        { active: true },
+        'maintenance',
+      )
+    ).json();
+    assert.equal(saved.maintenance_message, custom);
+    assert.equal((await req(null, '/business')).status, 503);
+    saved = await (
+      await req(
+        'admin',
+        maintenancePath,
+        'POST',
+        { message: 'Pesan baru' },
+        'maintenance',
+      )
+    ).json();
+    assert.equal(saved.maintenance_mode, true);
+    assert.equal(
+      (await (await req(null, '/api/portal/state')).json()).maintenance.message,
+      'Pesan baru',
+    );
+    saved = await (
+      await req(
+        'admin',
+        maintenancePath,
+        'POST',
+        { active: false },
+        'maintenance',
+      )
+    ).json();
+    assert.equal(saved.maintenance_message, 'Pesan baru');
     const create = await req(
       'admin',
       '/api/portal/admin/announcements',

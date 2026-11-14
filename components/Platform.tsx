@@ -179,7 +179,7 @@ export default function Platform({ initialTab = "landing", adminSection }: { ini
   }
 
   if (!canAdmin && !portal.data && !portal.error) return <PageLoading message="Memeriksa status layanan..." />;
-  if (!canAdmin && (portal.error || portal.data?.maintenance.active)) return <><ActionModal title={portal.error ? "Layanan belum tersedia" : "Sedang maintenance"}><p className="text-sm leading-relaxed text-zinc-300">{portal.error || portal.data?.maintenance.message}</p><div className="mt-5 flex flex-wrap gap-3"><button className="rounded-lg border border-zinc-600 px-4 py-2" onClick={portal.reload}>Periksa kembali</button>{!session && <button className="rounded-lg bg-red-600 px-4 py-2" onClick={() => setAuthModalOpen(true)}>Login</button>}{session && <button className="rounded-lg border border-zinc-600 px-4 py-2" onClick={handleLogout}>Keluar akun</button>}</div></ActionModal><AuthModal isOpen={authModalOpen} onClose={() => setAuthModalOpen(false)} reason="Login ke akun RED API" /></>;
+  if (!canAdmin && (portal.error || portal.data?.maintenance.active)) return <><ActionModal accent title={portal.error ? "Layanan belum tersedia" : "Sedang maintenance"}><p className="whitespace-pre-wrap break-words text-sm leading-relaxed text-zinc-300">{portal.error || portal.data?.maintenance.message}</p><div className="mt-5 flex flex-wrap gap-3"><button className="rounded-lg border border-zinc-600 px-4 py-2" onClick={portal.reload}>Periksa kembali</button>{!session && <button className="rounded-lg bg-red-600 px-4 py-2" onClick={() => setAuthModalOpen(true)}>Login</button>}{session && <button className="rounded-lg border border-zinc-600 px-4 py-2" onClick={handleLogout}>Keluar akun</button>}</div></ActionModal><AuthModal isOpen={authModalOpen} onClose={() => setAuthModalOpen(false)} reason="Login ke akun RED API" /></>;
 
   return (
     <>
@@ -308,7 +308,7 @@ export default function Platform({ initialTab = "landing", adminSection }: { ini
         {/* VIEW 3: PRICING (Public) */}
         {activeTab === "pricing" && (
           <section className="animate-fade-in">
-            <PricingTiers loggedIn={!!session} qrisReady={!!portal.data?.qrisReady} onLogin={() => {setAuthReason("Login untuk membeli paket dan mengirim bukti pembayaran.");setAuthModalOpen(true);}} />
+            <PricingTiers currentPlan={currentUser?.plan || "free"} loggedIn={!!session} qrisReady={!!portal.data?.qrisReady} onLogin={() => {setAuthReason("Login untuk membeli paket dan mengirim bukti pembayaran.");setAuthModalOpen(true);}} />
           </section>
         )}
 

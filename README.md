@@ -152,3 +152,13 @@ menghapus dialog melalui developer tools tidak membuka konten halaman atau akses
 Konfirmasi tindakan destruktif meliputi ban, perubahan role/plan, penghapusan endpoint/akun,
 maintenance, pengumuman, QRIS, dan keputusan pembayaran. Menghapus akun memerlukan ketik
 ulang email; akun sendiri dan akun ber-role admin dilindungi dari penghapusan.
+
+Pembelian paket mengikuti urutan Free → Basic → VIP → Enterprise. Paket yang lebih
+rendah dari paket aktif ditolak saat checkout, akses QRIS, unggah bukti, dan persetujuan
+admin, termasuk pemulihan persetujuan pesanan lama. Perpanjangan dan upgrade tetap tersedia.
+Admin dapat menolak pesanan lama yang tertahan dalam persetujuan setelah pelanggan naik paket,
+kemudian menindaklanjuti dana yang sudah diterima secara manual.
+
+Pesan pop up maintenance dapat disimpan melalui **Pengaturan Sistem → Pesan pop up maintenance**
+(maksimal 500 karakter). Menyimpan pesan mempertahankan status maintenance, dan mengubah status
+mempertahankan pesan terakhir. Pesan ditampilkan sebagai teks biasa dengan dukungan baris baru.

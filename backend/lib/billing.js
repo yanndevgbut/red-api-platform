@@ -5,6 +5,12 @@ const catalog = {
   vip: { name: 'VIP', price: 50000, daily: 15000, days: 30 },
   enterprise: { name: 'Enterprise', price: 150000, daily: 999999, days: 30 },
 };
+const planRanks = { free: 0, basic: 1, vip: 2, enterprise: 3 };
+function permitsPurchase(current, target) {
+  if (!Object.hasOwn(planRanks, current) || !Object.hasOwn(catalog, target))
+    throw new Error('Unknown plan');
+  return planRanks[target] >= planRanks[current];
+}
 const audit = (state, actor, action, target) => {
   state.audit.push({
     id: require('node:crypto').randomUUID(),
@@ -109,6 +115,7 @@ function startBillingReconciler() {
 }
 module.exports = {
   catalog,
+  permitsPurchase,
   audit,
   ensureEntitlement,
   clearManagedPlan,
