@@ -189,3 +189,40 @@ sebagai hasil sukses. Link CDN dapat berubah atau kedaluwarsa.
 Metadata katalog tersimpan di `backend/catalog/pindl.json`; gunakan data tersebut saat
 mendaftarkan endpoint pada tabel `endpoints` di instalasi baru. Parameter sengaja tidak
 memiliki nilai default agar formulir tester tetap kosong sebelum pengguna mengisinya.
+
+### YouTube Downloader (ytdl)
+
+`GET /api/download/ytdl?url=...&quality=720` tersedia dalam kategori **Downloader**, paket
+Free. Header `x-api-key` wajib diisi. URL menerima YouTube watch, Shorts, embed, live,
+dan `youtu.be`, dengan satu ID video. Parameter `quality` opsional (default 720), angka
+bulat 1–4320. Formulir yang mengirim quality kosong juga memakai default 720.
+
+```sh
+curl --get 'https://api.redapi.my.id/api/download/ytdl' \
+  -H 'x-api-key: YOUR_KEY' \
+  --data-urlencode 'url=https://www.youtube.com/watch?v=jNQXAC9IVRw' \
+  --data-urlencode 'quality=720'
+```
+
+Scraper Tubdown mengambil metadata, memilih MP4 tertinggi yang tidak melebihi quality
+(atau resolusi terendah jika seluruh pilihan lebih tinggi), lalu membuat dan menunggu
+job video serta MP3 secara berurutan. Respons berisi `success: true` dan `data` dengan
+`provider`, `id`, `title`, `author`, `duration_seconds`, `source`, serta `downloads.mp4`
+dan `downloads.mp3`. Kedua objek unduhan memuat format, quality, size_bytes, filename,
+dan URL file Tubdown. File tidak diteruskan melalui server RED API; link sementara dari
+provider dapat kedaluwarsa. Video privat, live yang tidak bisa dikonversi, dan pembatasan
+provider dapat menghasilkan error.
+
+Konversi memiliki batas total 180 detik dan request provider maksimal 30 detik per panggilan.
+Maksimal dua request ytdl diproses bersamaan; request yang ditolak karena kapasitas penuh
+atau parameter salah tidak memotong kuota. Request yang sudah diterima memakai satu kuota,
+termasuk jika provider kemudian gagal. Polling internal tidak memakai kuota tambahan.
+Jika client terputus, polling dihentikan.
+
+Untuk konversi panjang, backend mengirim whitespace JSON berkala agar koneksi tidak idle.
+Client tetap membaca satu objek JSON dengan `response.json()`. Karena HTTP header mungkin
+sudah dikirim, periksa field `success` dan `error.code` pada respons, termasuk HTTP 200.
+Gateway khusus GET ytdl menunggu maksimal 220 detik, tester 230 detik, dan fungsi proxy
+Vercel memakai maxDuration 240 detik. Endpoint lain mempertahankan timeout sebelumnya.
+
+Metadata katalog untuk instalasi baru tersedia di `backend/catalog/ytdl.json`.

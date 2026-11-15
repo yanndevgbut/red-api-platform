@@ -36,4 +36,13 @@ router.get('/pindl', (req,res,next) => {
   }
 });
 
+const { readInput, conversionSlots, createHandler } = require('../lib/ytdl-response');
+router.get('/ytdl', (req,res,next)=>{
+  try {req.ytdlInput=readInput(req.query);} catch(error) {return res.status(400).json({success:false,error:{code:error.code || 'INVALID_URL',message:error.message}});}
+  const key=req.get('x-api-key') || req.query.apikey;
+  if(req.query.apikey!==undefined && (typeof req.query.apikey!=='string' || (req.get('x-api-key') && req.query.apikey!==req.get('x-api-key'))))return res.status(401).json({success:false,error:{code:'INVALID_KEY',message:'Gunakan satu API key yang valid.'}});
+  if(typeof key!=='string' || key.length>128 || !/^[a-z0-9_-]+$/i.test(key))return res.status(401).json({success:false,error:{code:'INVALID_KEY',message:'API key diperlukan melalui header x-api-key.'}});
+  next();
+}, conversionSlots(), require('../middleware/entitlement'), authorize, createHandler());
+
 module.exports = router;

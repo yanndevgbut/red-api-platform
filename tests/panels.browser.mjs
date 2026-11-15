@@ -200,16 +200,23 @@ try {
   assert.equal(await notices.getByRole('dialog',{name:'Info terbaru'}).count(),0);await notices.close();
 
   const tester=await newPage('member-token',360);
+  await tester.addInitScript(()=>{window.__requestTimeouts=[];const original=AbortSignal.timeout.bind(AbortSignal);AbortSignal.timeout=ms=>{window.__requestTimeouts.push(ms);return original(ms);};});
   await tester.route('**/api/user',route=>route.fulfill({json:{profile:memberProfile,apiKey:{user_id:memberProfile.id,key:'red_live_fixture',is_active:true}}}));
   await tester.route('**/api/categories',route=>route.fulfill({json:{categories:['Stalk']}}));
-  await tester.route('**/api/endpoints',route=>route.fulfill({json:[{id:1,name:'FF fixture',category:'Stalk',method:'GET',path:'/api/stalk/ff',min_plan:'free',status:'active',description:'Fixture',params:[{name:'uid',type:'string',required:true}]}]}));
-  let release;
-  await tester.route('**/api/proxy/**',async route=>{await new Promise(resolve=>{release=resolve;});await route.fulfill({json:{status:true,result:{nickname:'Fixture'}}});});
+  await tester.route('**/api/endpoints',route=>route.fulfill({json:[{id:1,name:'FF fixture',category:'Stalk',method:'GET',path:'/api/stalk/ff',min_plan:'free',status:'active',description:'Fixture',params:[{name:'uid',type:'string',required:true}]},{id:2,name:'YT fixture',category:'Downloader',method:'GET',path:'/api/download/ytdl',min_plan:'free',status:'active',description:'Fixture',params:[{name:'url',type:'string',required:true},{name:'quality',type:'number',required:false}]}]}));
+  let release,failConversion=false;
+  await tester.route('**/api/proxy/api/**',async route=>{await new Promise(resolve=>{release=resolve;});await route.fulfill({contentType:'application/json',body:' \n'+JSON.stringify(failConversion?{success:false,error:{code:'CONVERSION_FAILED',message:'Provider failed'}}:{status:true,result:{nickname:'Fixture'}})});});
   await tester.goto(base+'/?tab=docs');
   const card=tester.getByRole('button',{name:/FF fixture/});await card.waitFor();assert.equal(await card.getAttribute('aria-expanded'),'false');await card.click();
-  await tester.getByRole('textbox',{name:'uid',exact:true}).fill('12345678');await tester.getByRole('button',{name:'EXECUTE REQUEST',exact:true}).click();
+  await tester.getByRole('textbox',{name:'uid',exact:true}).fill('12345678');await tester.locator('#endpoint-1').getByRole('button',{name:'EXECUTE REQUEST',exact:true}).click();
   await tester.getByText('Menjalankan endpoint, menunggu respons...',{exact:true}).waitFor();assert.equal(await tester.locator('[aria-busy="true"]').count(),1);
-  release();await tester.getByText('200 OK',{exact:true}).waitFor();assert.equal(await tester.locator('[aria-busy="true"]').count(),0);await tester.close();
+  release();await tester.getByText('200 OK',{exact:true}).waitFor();assert.equal(await tester.locator('[aria-busy="true"]').count(),0);
+  await tester.getByRole('button',{name:/YT fixture/}).click();
+  await tester.getByRole('textbox',{name:'url',exact:true}).fill('https://youtu.be/jNQXAC9IVRw');
+  failConversion=true;await tester.locator('#endpoint-2').getByRole('button',{name:'EXECUTE REQUEST',exact:true}).click();
+  await tester.getByText('Menjalankan endpoint, menunggu respons...',{exact:true}).waitFor();
+  assert.ok((await tester.evaluate(()=>window.__requestTimeouts)).includes(230000));release();
+  await tester.getByText('200 ERROR',{exact:true}).waitFor();assert.equal(await tester.locator('[aria-busy="true"]').count(),0);await tester.close();
   console.log('PASS announcements escape markup and remember dismissal; tester opens closed and shows execution animation until JSON arrives');
   // Manual checkout and review use fixed server orders and private image requests.
   const png=Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aPV8AAAAASUVORK5CYII=','base64');

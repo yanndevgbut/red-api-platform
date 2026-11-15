@@ -17,10 +17,13 @@ test('retired endpoints remain removed and TikTok requires valid input and authe
   try {
     assert.equal((await fetch(base + '/health')).status, 200);
     assert.equal((await fetch(base + '/api/system/stats')).status, 200);
-    assert.equal((await (await fetch(base + '/')).json()).endpoints_count, 3);
+    assert.equal((await (await fetch(base + '/')).json()).endpoints_count, 4);
     assert.equal((await fetch(base + '/api/download/tiktok')).status, 400);
     assert.equal((await fetch(base + '/api/download/tiktok?url=https://example.com')).status, 400);
     assert.equal((await fetch(base + '/api/download/tiktok?url=https://vt.tiktok.com/test')).status, 401);
+    assert.equal((await fetch(base + '/api/download/ytdl')).status,400);
+    assert.equal((await fetch(base + '/api/download/ytdl?url=https://youtu.be/jNQXAC9IVRw')).status,401);
+    assert.equal((await fetch(base + '/api/download/ytdl?url=https://youtu.be/jNQXAC9IVRw&quality=-1')).status,400);
     assert.equal((await fetch(base + '/api/download/pindl')).status,400);
     assert.equal((await fetch(base + '/api/download/pindl?url=https://example.com')).status,400);
     assert.equal((await fetch(base + '/api/download/pindl?url=https://www.pinterest.com/pin/123/')).status,401);

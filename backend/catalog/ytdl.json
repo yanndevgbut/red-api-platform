@@ -1,0 +1,13 @@
+{
+  "name": "YouTube Downloader (ytdl)",
+  "category": "Downloader",
+  "method": "GET",
+  "path": "/api/download/ytdl",
+  "description": "Ambil link MP4 dan MP3 video YouTube publik melalui Tubdown. Quality opsional, default 720; resolusi hasil mengikuti format yang tersedia. Konversi dapat memerlukan hingga 180 detik.",
+  "min_plan": "free",
+  "status": "active",
+  "params": [
+    { "name": "url", "type": "string", "required": true },
+    { "name": "quality", "type": "number", "required": false }
+  ]
+}

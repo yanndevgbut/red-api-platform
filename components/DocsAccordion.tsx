@@ -116,18 +116,17 @@ export default function DocsAccordion({ defaultKey }: { defaultKey?: string }) {
         fetchOptions.body = JSON.stringify(bodyObj);
       }
 
-      const res = await fetch(url, { ...fetchOptions, redirect: "error", signal: AbortSignal.timeout(25000) });
-      const latency = Date.now() - startTime;
+      const res = await fetch(url, { ...fetchOptions, redirect: "error", signal: AbortSignal.timeout(ep.path === "/api/download/ytdl" ? 230000 : 25000) });
       let body: any;
       try {
         body = await res.json();
       } catch {
-        body = { message: "Failed to parse JSON response" };
+        body = { success: false, error: {code: "INVALID_RESPONSE", message: "Respons JSON tidak dapat dibaca."} };
       }
 
       setResponses((prev) => ({
         ...prev,
-        [ep.id]: { status: res.status, latency, body },
+        [ep.id]: { status: res.status, latency: Date.now() - startTime, body },
       }));
     } catch (err: any) {
       setResponses((prev) => ({
@@ -212,6 +211,7 @@ export default function DocsAccordion({ defaultKey }: { defaultKey?: string }) {
             const isOpen = activeOpenId === ep.id;
             const resData = responses[ep.id];
             const isSubmitting = loadingReq[ep.id] || false;
+            const responseFailed = resData && (resData.status >= 400 || resData.body?.success === false || resData.body?.status === false);
             const canExecute = isFeaturePath(ep.path) && ["GET", "POST"].includes(ep.method) && ep.status === "active";
 
             return (
@@ -367,12 +367,12 @@ export default function DocsAccordion({ defaultKey }: { defaultKey?: string }) {
                           <div className="flex items-center gap-3 text-xs font-mono-code">
                             <span
                               className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                                resData.status === 200
+                                !responseFailed
                                   ? "bg-emerald-950 text-emerald-400 border border-emerald-800"
                                   : "bg-red-950 text-red-400 border border-red-800"
                               }`}
                             >
-                              {resData.status} {resData.status === 200 ? "OK" : "ERROR"}
+                              {resData.status} {responseFailed ? "ERROR" : "OK"}
                             </span>
                             <span className="text-zinc-500 text-[11px]">{resData.latency}ms</span>
                           </div>
