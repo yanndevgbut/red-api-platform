@@ -1,0 +1,12 @@
+{
+  "name": "Pinterest Downloader (pindl)",
+  "category": "Downloader",
+  "method": "GET",
+  "path": "/api/download/pindl",
+  "description": "Ambil link gambar atau video dari pin Pinterest publik. Mendukung URL pin.it dan pinterest.com/pin/ID/.",
+  "min_plan": "free",
+  "status": "active",
+  "params": [
+    { "name": "url", "type": "string", "required": true }
+  ]
+}

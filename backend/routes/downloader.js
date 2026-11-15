@@ -21,4 +21,19 @@ router.get('/tiktok', (req, res, next) => {
   }
 });
 
+const { scrapePinterest, isPinterestUrl } = require('../lib/pindl');
+router.get('/pindl', (req,res,next) => {
+  if (!isPinterestUrl(req.query.url)) return res.status(400).json({success:false,error:'Gunakan parameter url berupa URL pin.it atau pinterest.com/pin/ID/.'});
+  const key = req.get('x-api-key') || req.query.apikey;
+  if (req.query.apikey !== undefined && (typeof req.query.apikey !== 'string' || (req.get('x-api-key') && req.query.apikey !== req.get('x-api-key')))) return res.status(401).json({success:false,error:'Gunakan satu API key yang valid.'});
+  if (typeof key !== 'string' || key.length > 128 || !/^[a-z0-9_-]+$/i.test(key)) return res.status(401).json({success:false,error:'API key diperlukan melalui header x-api-key.'});
+  next();
+}, require('../middleware/entitlement'), authorize, async (req,res) => {
+  try { res.json({success:true,data:await scrapePinterest(req.query.url)}); }
+  catch(error) {
+    const code = ['TimeoutError','AbortError'].includes(error.name) ? 504 : error.name === 'PinNotFoundError' ? 404 : 502;
+    res.status(code).json({success:false,error:{404:'Pin publik tidak ditemukan.',502:'Media Pinterest belum dapat diambil. Pastikan pin bersifat publik dan coba lagi.',504:'Permintaan Pinterest melewati batas waktu. Coba lagi.'}[code]});
+  }
+});
+
 module.exports = router;

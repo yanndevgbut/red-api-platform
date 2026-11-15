@@ -162,3 +162,30 @@ kemudian menindaklanjuti dana yang sudah diterima secara manual.
 Pesan pop up maintenance dapat disimpan melalui **Pengaturan Sistem → Pesan pop up maintenance**
 (maksimal 500 karakter). Menyimpan pesan mempertahankan status maintenance, dan mengubah status
 mempertahankan pesan terakhir. Pesan ditampilkan sebagai teks biasa dengan dukungan baris baru.
+
+### Pinterest Downloader (pindl)
+
+`GET /api/download/pindl?url=...` tersedia dalam kategori **Downloader**, paket Free.
+Kirim API key melalui header `x-api-key`. Parameter `url` menerima pin publik
+`https://www.pinterest.com/pin/ID/` atau shortlink `https://pin.it/KODE`.
+
+```sh
+curl --get 'https://api.redapi.my.id/api/download/pindl' \
+  -H 'x-api-key: YOUR_KEY' \
+  --data-urlencode 'url=https://www.pinterest.com/pin/99360735500167749/'
+```
+
+Respons sukses mengikuti scraper referensi dengan `success: true` dan objek `data` yang
+berisi `id`, `title`, `type`, `format`, `url`, serta `source`. `data.url` berisi link media; API tidak meneruskan
+file media melalui server. Video dipilih dari pin yang sesuai, memprioritaskan MP4 lalu
+resolusi terbesar; gambar memakai metadata Open Graph. Pin video yang tidak memiliki link
+video menghasilkan error, bukan thumbnail yang dilaporkan sebagai video.
+
+Redirect diperiksa per langkah, media dibatasi ke HTTPS `pinimg.com`, respons HTML maksimal
+5 MB, dan keseluruhan pengambilan halaman dibatasi 20 detik. URL tidak valid ditolak sebelum
+pengurangan kuota. Pin privat, pin yang dihapus, atau penolakan oleh Pinterest tidak dianggap
+sebagai hasil sukses. Link CDN dapat berubah atau kedaluwarsa.
+
+Metadata katalog tersimpan di `backend/catalog/pindl.json`; gunakan data tersebut saat
+mendaftarkan endpoint pada tabel `endpoints` di instalasi baru. Parameter sengaja tidak
+memiliki nilai default agar formulir tester tetap kosong sebelum pengguna mengisinya.
