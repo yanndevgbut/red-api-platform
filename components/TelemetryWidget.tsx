@@ -20,7 +20,7 @@ export default function TelemetryWidget() {
       <div className="flex flex-wrap gap-3 items-center justify-between">
         <div className="flex min-w-0 items-center gap-2">
           <span className="w-2.5 h-2.5 shrink-0 bg-red-600 rounded-full" />
-          <h2 className="font-bebas text-3xl tracking-wide text-white">LIVE SERVER TELEMETRY (PTERODACTYL)</h2>
+          <h2 className="font-bebas text-3xl tracking-wide text-white">STATUS SERVER</h2>
         </div>
         <span className="text-xs font-mono-code text-zinc-500">REALTIME MONITOR</span>
       </div>

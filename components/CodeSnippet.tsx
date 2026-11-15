@@ -40,7 +40,7 @@ print(res.json())`,
           <span className="w-2.5 h-2.5 rounded-full bg-red-600" />
           <span className="w-2.5 h-2.5 rounded-full bg-zinc-700" />
           <span className="w-2.5 h-2.5 rounded-full bg-zinc-700" />
-          <span className="text-xs font-mono-code text-zinc-400 ml-2">Quick Integration</span>
+          <span className="text-xs font-mono-code text-zinc-400 ml-2">Contoh request</span>
         </div>
 
         <div className="flex gap-1 text-[11px] font-mono-code">

@@ -62,7 +62,7 @@ export default function UserDashboard({ user, apiKey, onRefresh, onKeyRotated, a
   return (
     <div className="space-y-8">
       <div className="border-b border-surface-border pb-4">
-        <h2 className="font-bebas text-4xl tracking-wide text-white">USER DASHBOARD & CREDENTIALS</h2>
+        <h2 className="font-bebas text-4xl tracking-wide text-white">PROFIL & API KEY</h2>
         <p className="text-xs font-mono-code text-zinc-400">
           Kelola API Key, pantau kuota request harian, dan informasi paket Anda.
         </p>
@@ -129,7 +129,7 @@ export default function UserDashboard({ user, apiKey, onRefresh, onKeyRotated, a
         {/* API Key Vault */}
         <div className="lg:col-span-7 min-w-0 bg-surface-panel border border-surface-border rounded-xl p-4 sm:p-6 space-y-6">
           <div className="flex flex-wrap gap-2 items-center justify-between border-b border-surface-border pb-3">
-            <h3 className="font-bebas text-2xl text-white">YOUR PRODUCTION API KEY</h3>
+            <h3 className="font-bebas text-2xl text-white">API KEY ANDA</h3>
             <span className="text-xs font-mono-code text-emerald-400">{apiKey ? "ACTIVE" : "KEY BELUM TERSEDIA"}</span>
           </div>
 

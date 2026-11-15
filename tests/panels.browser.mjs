@@ -38,7 +38,7 @@ try {
   const anonymous = await newPage();
   for (const path of ['/admin', '/admin/users', '/admin/not-a-page']) {
     await anonymous.goto(base + path); await anonymous.waitForURL(base + '/');
-    await anonymous.getByText('FAST, RELIABLE', { exact: false }).waitFor();
+    await anonymous.getByText('UNTUK BOT', { exact: false }).waitFor();
   }
   await anonymous.getByRole('button', { name: 'Buka menu navigasi' }).click();
   assert.equal(await anonymous.getByRole('button', { name: '05. MASTER ADMIN CONSOLE' }).count(), 0);
@@ -187,7 +187,7 @@ try {
   await maintenanceModal.waitFor();assert.equal(await maintenanceModal.evaluate(el=>getComputedStyle(el).borderTopColor),'rgb(220, 38, 38)');await blocked.keyboard.press('Escape');assert.equal(await maintenanceModal.isVisible(),true);
   assert.equal(await blocked.getByRole('button',{name:'Tutup',exact:true}).count(),0);
   await blocked.evaluate(()=>document.querySelector('dialog').remove());
-  assert.equal(await blocked.getByText('FAST, RELIABLE',{exact:false}).count(),0);
+  assert.equal(await blocked.getByText('UNTUK BOT',{exact:false}).count(),0);
   await blocked.close();
   console.log('PASS maintenance dialog cannot close with Escape and protected content is absent behind it');
 
@@ -196,7 +196,7 @@ try {
   await notices.route('**/api/portal/state',route=>route.fulfill({json:{maintenance:{active:false,message:''},announcements:[{id:'test-notice',title:'Info terbaru',message:'<img src=x onerror="window.__noticeXss=1">',expiresAt:new Date(Date.now()+60000).toISOString()}],qrisReady:false,serverTime:new Date().toISOString()}}));
   await notices.goto(base+'/');await notices.getByRole('dialog',{name:'Info terbaru'}).waitFor();
   assert.equal(await notices.evaluate(()=>window.__noticeXss),undefined);assert.equal(await notices.locator('img[src="x"]').count(),0);
-  await notices.getByRole('button',{name:'Tutup',exact:true}).click();await notices.reload();await notices.getByText('FAST, RELIABLE',{exact:false}).waitFor();
+  await notices.getByRole('button',{name:'Tutup',exact:true}).click();await notices.reload();await notices.getByText('UNTUK BOT',{exact:false}).waitFor();
   assert.equal(await notices.getByRole('dialog',{name:'Info terbaru'}).count(),0);await notices.close();
 
   const tester=await newPage('member-token',360);

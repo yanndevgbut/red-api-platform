@@ -21,8 +21,8 @@ const plusJakartaSans = Plus_Jakarta_Sans({
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "RED API — High Velocity REST API Platform",
-  description: "Enterprise REST API Gateway running on distributed Pterodactyl Node with AI, Media Scraping, and Stalker services.",
+  title: "RED API",
+  description: "Dokumentasi REST API, pengujian endpoint, dan pengelolaan API key untuk integrasi bot serta aplikasi.",
   icons: {
     icon: [
       { url: "/favicon.ico?v=red-api-logo", sizes: "any" },

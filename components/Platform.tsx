@@ -235,13 +235,13 @@ export default function Platform({ initialTab = "landing", adminSection }: { ini
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
                 <div className="min-w-0 lg:col-span-7 space-y-5 sm:space-y-6">
                   <h1 className="hero-title font-bebas tracking-tight text-white">
-                    FAST, RELIABLE <br />
-                    <span className="text-red-400">REST API PLATFORM</span> <br />
-                    FOR BUILDERS
+                    REST API <br />
+                    <span className="text-red-400">UNTUK BOT</span> <br />
+                    DAN APLIKASI
                   </h1>
 
                   <p className="text-zinc-400 text-base max-w-xl leading-relaxed">
-                    Infrastruktur REST API terdistribusi dengan modul AI, Media Scraping, Tooling, dan WhatsApp Engine. Dioptimalkan untuk performa tinggi dengan latency rendah.
+                    Pilih endpoint, coba request langsung dari browser, lalu gunakan API key untuk menghubungkannya ke bot atau aplikasi Anda.
                   </p>
 
                   <div className="grid grid-cols-1 min-[420px]:flex flex-wrap items-center gap-3 pt-2">
@@ -249,7 +249,7 @@ export default function Platform({ initialTab = "landing", adminSection }: { ini
                       onClick={() => handleTabSelect("docs")}
                       className="action-button justify-center rounded-lg px-4 sm:px-6 py-3 bg-red-500 hover:bg-red-400 text-black font-bebas text-2xl tracking-wider uppercase transition-all active:scale-95 shadow-[0_0_20px_rgba(220,38,38,0.3)] hover:shadow-[0_0_30px_rgba(220,38,38,0.6)] flex items-center gap-2"
                     >
-                      EXPLORE ENDPOINTS
+                      LIHAT ENDPOINT
                       <ArrowRight className="w-5 h-5" />
                     </button>
 
@@ -257,7 +257,7 @@ export default function Platform({ initialTab = "landing", adminSection }: { ini
                       onClick={() => handleTabSelect("pricing")}
                       className="action-button rounded-lg px-4 sm:px-6 py-3 border border-surface-border hover:border-red-500 text-white font-bebas text-2xl tracking-wider uppercase transition-colors"
                     >
-                      UPGRADE TO VIP
+                      LIHAT PAKET
                     </button>
                   </div>
                 </div>
@@ -353,10 +353,9 @@ export default function Platform({ initialTab = "landing", adminSection }: { ini
         <div className="max-w-7xl mx-auto px-4 sm:px-6 flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex flex-wrap items-center gap-2">
             <BrandWordmark />
-            <span>— HIGH PERFORMANCE REST API GATEWAY</span>
           </div>
           <div>
-            <span>DEPLOYED ON PTERODACTYL NODE · SUPABASE BACKED</span>
+            <span>Dokumentasi dan tester dalam satu panel</span>
           </div>
         </div>
       </footer>

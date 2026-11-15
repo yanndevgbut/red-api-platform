@@ -59,13 +59,13 @@ export default function Navbar({
         
         {/* Logo */}
         <div className="flex items-center gap-3">
-          <button aria-label="RED API — Beranda" onClick={() => setActiveTab("landing")} className="flex items-center gap-2 group text-left">
+          <button aria-label="Beranda RED API" onClick={() => setActiveTab("landing")} className="flex items-center gap-2 group text-left">
             <BrandIcon decorative className="h-10 w-10 transition-transform group-hover:scale-105" />
             <div className="flex flex-col">
               <span className="font-bebas text-2xl tracking-wider leading-none text-white flex items-center gap-1">
                 RED<span className="text-red-600"> API</span>
               </span>
-              <span className="text-[9px] font-mono-code text-surface-muted tracking-widest leading-none">V2.4 PRODUCTION</span>
+              <span className="text-[9px] font-mono-code text-surface-muted tracking-widest leading-none">REST API</span>
             </div>
           </button>
 

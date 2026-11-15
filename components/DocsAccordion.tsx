@@ -158,9 +158,9 @@ export default function DocsAccordion({ defaultKey }: { defaultKey?: string }) {
       {/* Search & Category Filter */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-surface-border pb-4">
         <div>
-          <h2 className="font-bebas text-4xl tracking-wide text-white">API EXPLORER & PLAYGROUND</h2>
+          <h2 className="font-bebas text-4xl tracking-wide text-white">DOKUMENTASI & TESTER</h2>
           <p className="text-xs font-mono-code text-zinc-400">
-            Klik endpoint untuk membuka formulir parameter dan test langsung secara inline.
+            Pilih endpoint, isi parameter, lalu kirim request untuk melihat responsnya.
           </p>
         </div>
 
@@ -255,7 +255,7 @@ export default function DocsAccordion({ defaultKey }: { defaultKey?: string }) {
                         </span>
                       </div>
                       <div className="text-xs text-zinc-400 mt-0.5">
-                        {ep.name} — {ep.description}
+                        {ep.name}: {ep.description}
                       </div>
                     </div>
                   </div>

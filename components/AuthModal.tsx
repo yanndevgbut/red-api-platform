@@ -68,7 +68,7 @@ export default function AuthModal({ isOpen, onClose, reason }: AuthModalProps) {
           <BrandIcon className="h-12 w-12" />
           <div className="inline-flex items-center gap-2 px-2.5 py-1 bg-red-950/70 border border-red-800 text-red-300 text-[10px] font-mono-code rounded uppercase font-bold">
             <ShieldAlert className="w-3.5 h-3.5 text-red-500" />
-            LOGIN REQUIRED · OTENTIKASI WAJIB
+            MASUK UNTUK MELANJUTKAN
           </div>
 
           <h3 id="login-title" className="font-bebas text-4xl text-white tracking-wide">
@@ -76,7 +76,7 @@ export default function AuthModal({ isOpen, onClose, reason }: AuthModalProps) {
           </h3>
 
           <p className="text-zinc-400 text-xs font-mono-code leading-relaxed">
-            {reason || "Halaman ini memerlukan autentikasi. Masuk untuk mendapatkan API Key instan dan membuka akses penuh ke Playground & Tester."}
+            {reason || "Masuk dengan Google untuk mendapatkan API key dan mencoba endpoint."}
           </p>
         </div>
 
@@ -84,11 +84,11 @@ export default function AuthModal({ isOpen, onClose, reason }: AuthModalProps) {
         <div className="bg-black/60 border border-surface-border rounded-lg p-3.5 space-y-2 text-xs font-mono-code">
           <div className="flex items-center gap-2 text-zinc-300">
             <CheckCircle2 className="w-4 h-4 text-red-500 flex-shrink-0" />
-            <span>Generate otomatis Production API Key unik</span>
+            <span>API key untuk akun Anda</span>
           </div>
           <div className="flex items-center gap-2 text-zinc-300">
             <CheckCircle2 className="w-4 h-4 text-red-500 flex-shrink-0" />
-            <span>Akses penuh tester interaktif semua endpoint</span>
+            <span>Formulir pengujian untuk endpoint yang tersedia</span>
           </div>
           <div className="flex items-center gap-2 text-zinc-300">
             <CheckCircle2 className="w-4 h-4 text-red-500 flex-shrink-0" />
