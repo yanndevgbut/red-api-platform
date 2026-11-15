@@ -203,20 +203,44 @@ try {
   await tester.addInitScript(()=>{window.__requestTimeouts=[];const original=AbortSignal.timeout.bind(AbortSignal);AbortSignal.timeout=ms=>{window.__requestTimeouts.push(ms);return original(ms);};});
   await tester.route('**/api/user',route=>route.fulfill({json:{profile:memberProfile,apiKey:{user_id:memberProfile.id,key:'red_live_fixture',is_active:true}}}));
   await tester.route('**/api/categories',route=>route.fulfill({json:{categories:['Stalk']}}));
-  await tester.route('**/api/endpoints',route=>route.fulfill({json:[{id:1,name:'FF fixture',category:'Stalk',method:'GET',path:'/api/stalk/ff',min_plan:'free',status:'active',description:'Fixture',params:[{name:'uid',type:'string',required:true}]},{id:2,name:'YT fixture',category:'Downloader',method:'GET',path:'/api/download/ytdl',min_plan:'free',status:'active',description:'Fixture',params:[{name:'url',type:'string',required:true},{name:'quality',type:'number',required:false}]}]}));
-  let release,failConversion=false;
-  await tester.route('**/api/proxy/api/**',async route=>{await new Promise(resolve=>{release=resolve;});await route.fulfill({contentType:'application/json',body:' \n'+JSON.stringify(failConversion?{success:false,error:{code:'CONVERSION_FAILED',message:'Provider failed'}}:{status:true,result:{nickname:'Fixture'}})});});
+  await tester.route('**/api/endpoints',route=>route.fulfill({json:[{id:1,name:'FF fixture',category:'Stalk',method:'GET',path:'/api/stalk/ff',min_plan:'free',status:'active',description:'Fixture',params:[{name:'uid',type:'string',required:true}]},{id:2,name:'YT fixture',category:'Downloader',method:'GET',path:'/api/download/ytdl',min_plan:'free',status:'active',description:'Fixture',params:[{name:'url',type:'string',required:true},{name:'quality',type:'number',required:false}]},{id:3,name:'SS Web fixture',category:'Tools',method:'GET',path:'/api/tools/ssweb',min_plan:'free',status:'active',description:'Fixture',params:[{name:'url',type:'string',required:true},{name:'mode',type:'string',required:false},{name:'fullPage',type:'boolean',required:false},{name:'waitMs',type:'number',required:false}]}]}));
+  let release,failConversion=false,captureFixture='',failScreenshot=false,onScreenshotRequest;
+  await tester.route('**/api/proxy/api/**',async route=>{
+    const screenshot=route.request().url().includes('/api/tools/ssweb?');
+    await new Promise(resolve=>{release=resolve;if(screenshot)onScreenshotRequest?.();});
+    let body=failConversion?{success:false,error:{code:'CONVERSION_FAILED',message:'Provider failed'}}:{status:true,result:{nickname:'Fixture'}};
+    if(screenshot){const mode=new URL(route.request().url()).searchParams.get('mode');body=failScreenshot?{success:false,error:{code:'BLOCKED_TARGET',message:'Target tidak diizinkan.'}}:{success:true,data:{title:'Screenshot fixture',url:'https://example.com/',mode,full_page:false,viewport:{width:390,height:844},image:{mime_type:'image/png',encoding:'base64',width:16,height:16,size_bytes:100,base64:captureFixture}}};}
+    await route.fulfill({contentType:'application/json',body:' \n'+JSON.stringify(body)});
+  });
   await tester.goto(base+'/?tab=docs');
   const card=tester.getByRole('button',{name:/FF fixture/});await card.waitFor();assert.equal(await card.getAttribute('aria-expanded'),'false');await card.click();
   await tester.getByRole('textbox',{name:'uid',exact:true}).fill('12345678');await tester.locator('#endpoint-1').getByRole('button',{name:'EXECUTE REQUEST',exact:true}).click();
   await tester.getByText('Menjalankan endpoint, menunggu respons...',{exact:true}).waitFor();assert.equal(await tester.locator('[aria-busy="true"]').count(),1);
   release();await tester.getByText('200 OK',{exact:true}).waitFor();assert.equal(await tester.locator('[aria-busy="true"]').count(),0);
   await tester.getByRole('button',{name:/YT fixture/}).click();
-  await tester.getByRole('textbox',{name:'url',exact:true}).fill('https://youtu.be/jNQXAC9IVRw');
+  await tester.locator('#endpoint-2').getByRole('textbox',{name:'url',exact:true}).fill('https://youtu.be/jNQXAC9IVRw');
   failConversion=true;await tester.locator('#endpoint-2').getByRole('button',{name:'EXECUTE REQUEST',exact:true}).click();
   await tester.getByText('Menjalankan endpoint, menunggu respons...',{exact:true}).waitFor();
   assert.ok((await tester.evaluate(()=>window.__requestTimeouts)).includes(230000));release();
-  await tester.getByText('200 ERROR',{exact:true}).waitFor();assert.equal(await tester.locator('[aria-busy="true"]').count(),0);await tester.close();
+  await tester.getByText('200 ERROR',{exact:true}).waitFor();assert.equal(await tester.locator('[aria-busy="true"]').count(),0);
+  captureFixture=await tester.evaluate(()=>{const canvas=document.createElement('canvas');canvas.width=16;canvas.height=16;const c=canvas.getContext('2d');c.fillStyle='#dc2626';c.fillRect(0,0,16,16);return canvas.toDataURL('image/png').split(',')[1];});
+  await tester.getByRole('button',{name:/SS Web fixture/}).click();const screenshotPanel=tester.locator('#endpoint-3');
+  assert.equal(await screenshotPanel.getByRole('textbox',{name:'url',exact:true}).inputValue(),'');
+  assert.equal(await screenshotPanel.getByLabel('Perangkat screenshot',{exact:true}).inputValue(),'desktop');
+  await screenshotPanel.getByRole('textbox',{name:'url',exact:true}).fill('https://example.com');
+  for(const mode of ['desktop','tablet','hp']){
+    await screenshotPanel.getByLabel('Perangkat screenshot',{exact:true}).selectOption(mode);
+    const requestReady=new Promise(resolve=>onScreenshotRequest=resolve);
+    await screenshotPanel.getByRole('button',{name:'EXECUTE REQUEST',exact:true}).click();await requestReady;release();
+    await screenshotPanel.getByRole('img',{name:'Screenshot '+({desktop:'Desktop',tablet:'Tablet',hp:'HP'})[mode],exact:true}).waitFor();
+    await tester.waitForFunction(()=>document.querySelector('#endpoint-3 img')?.naturalWidth===16);
+    assert.equal(await screenshotPanel.locator('pre').count(),0);assert.equal(await screenshotPanel.getByRole('button',{name:'COPY JSON',exact:true}).count(),0);
+    assert.ok((await tester.evaluate(()=>window.__requestTimeouts)).includes(135000));
+  }
+  const downloadEvent=tester.waitForEvent('download');await screenshotPanel.getByRole('link',{name:'Unduh PNG',exact:true}).click();const download=await downloadEvent;assert.equal(download.suggestedFilename(),'red-api-hp.png');await download.cancel();
+  for(const width of [320,360,1280]){await tester.setViewportSize({width,height:850});assert.equal(await tester.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);}
+  failScreenshot=true;const errorReady=new Promise(resolve=>onScreenshotRequest=resolve);await screenshotPanel.getByRole('button',{name:'EXECUTE REQUEST',exact:true}).click();await errorReady;release();await screenshotPanel.getByRole('alert').waitFor();assert.equal(await screenshotPanel.getByRole('alert').innerText(),'Target tidak diizinkan.');assert.equal(await screenshotPanel.locator('pre').count(),0);await tester.close();
+  console.log('PASS screenshot device selectors, image preview, PNG download, error display and responsive layout');
   console.log('PASS announcements escape markup and remember dismissal; tester opens closed and shows execution animation until JSON arrives');
   // Manual checkout and review use fixed server orders and private image requests.
   const png=Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aPV8AAAAASUVORK5CYII=','base64');

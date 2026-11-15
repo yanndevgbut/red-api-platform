@@ -226,3 +226,52 @@ Gateway khusus GET ytdl menunggu maksimal 220 detik, tester 230 detik, dan fungs
 Vercel memakai maxDuration 240 detik. Endpoint lain mempertahankan timeout sebelumnya.
 
 Metadata katalog untuk instalasi baru tersedia di `backend/catalog/ytdl.json`.
+
+### Screenshot Web (ssweb)
+
+`GET /api/tools/ssweb?url=...&mode=desktop` tersedia dalam kategori **Tools**, paket Free,
+dengan header `x-api-key`. Tester menampilkan preview gambar serta tombol **Unduh PNG** dan
+**Buka ukuran asli**. Pilihan perangkat memakai dropdown; URL tetap kosong sebelum diisi.
+
+```sh
+curl --get 'https://api.redapi.my.id/api/tools/ssweb' \
+  -H 'x-api-key: YOUR_KEY' \
+  --data-urlencode 'url=https://example.com' \
+  --data-urlencode 'mode=hp' \
+  --data-urlencode 'fullPage=false' \
+  --data-urlencode 'waitMs=5000'
+```
+
+Mode: `desktop` 1440×900, `tablet` 768×1024, `hp` 390×844; skala 1. Alias `dekstop`,
+`mobile`, dan `phone` juga diterima. `fullPage` menerima `true`/`false` (default false),
+`waitMs` bilangan bulat 0–30000 (default 5000). Parameter opsional kosong memakai default.
+Respons API mengikuti scraper: `success` dan objek `data` dengan URL, judul, mode, viewport,
+serta `image` PNG dalam base64. Hanya tampilan tester yang mengubahnya menjadi preview Blob.
+PNG dibatasi 3 MiB; halaman penuh maksimal 8000 piksel tinggi, 1920 piksel lebar, 12 juta
+piksel. Gunakan area layar atau mode HP jika hasil terlalu besar. Waktu total capture
+maksimal 75 detik; gateway 125 detik, tester 135 detik. JSON dapat diawali whitespace
+keepalive, sehingga periksa `success` meski status HTTP 200 seperti pada ytdl.
+
+Browser memakai konteks baru setiap request, tanpa session, cookie, atau kredensial aplikasi.
+Akses jaringan dipaksa melalui proxy loopback khusus. Proxy memvalidasi seluruh jawaban DNS,
+menolak alamat privat/reserved dan port nonstandar, serta menyambung ke IP publik yang sudah
+diperiksa agar DNS rebinding tidak mengganti tujuan koneksi. Redirect dan subresource juga
+melewati proxy. Service worker, WebSocket, QUIC, dan UDP WebRTC langsung dibatasi. Batas per
+capture: 40 MiB unduhan, 8 MiB unggahan, 300 request/koneksi proxy, dan maksimal 48 socket aktif.
+Satu screenshot diproses bersamaan. Parameter salah, target awal terlarang, runtime belum siap,
+dan kapasitas penuh ditolak sebelum pemotongan kuota; capture yang sudah dimulai memakai satu
+kuota termasuk ketika target kemudian gagal. Browser/proxy ditutup saat selesai atau client putus.
+
+Runtime browser dipisahkan di `backend/ssweb-runtime` (lockfile dipin): Playwright Core,
+Chromium serverless, dan ipaddr.js. Startup menyiapkannya di background melalui `npm ci
+--ignore-scripts` tanpa mengganti dependency backend yang sudah ada, lalu menjalankan smoke
+check Chromium. Status diagnostik privat ada di `backend/data/ssweb-runtime-status.json`.
+File browser dan profile sementara memakai volume `backend/data/ssweb-work`, sehingga tidak
+memenuhi tmpfs `/tmp` panel. Lokasi dapat dikonfigurasi operator melalui `SSWEB_WORK_DIR`.
+Route screenshot baru menerima request setelah smoke check berhasil. Node 22.17+ atau 24+
+dan container Linux x64 dibutuhkan untuk bundle Chromium ini. `CHROME_PATH` dapat menunjuk
+Chromium kompatibel yang disediakan operator. Dependency browser tetap diperlukan.
+
+Untuk development/tests: jalankan `npm ci --prefix backend/ssweb-runtime --ignore-scripts`
+sebelum suite keamanan yang menjalankan capture Chromium pada fixture lokal. Metadata
+katalog berada di `backend/catalog/ssweb.json`.

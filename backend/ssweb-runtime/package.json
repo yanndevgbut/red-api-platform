@@ -1,0 +1,10 @@
+{
+  "name": "red-api-ssweb-runtime",
+  "version": "1.0.0",
+  "private": true,
+  "dependencies": {
+    "@sparticuz/chromium": "153.0.0",
+    "ipaddr.js": "2.5.0",
+    "playwright-core": "1.65.1"
+  }
+}

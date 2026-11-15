@@ -1,0 +1,15 @@
+{
+  "name": "Screenshot Web (ssweb)",
+  "category": "Tools",
+  "method": "GET",
+  "path": "/api/tools/ssweb",
+  "description": "Ambil screenshot PNG website publik. Pilih mode desktop, tablet, atau hp. fullPage opsional untuk halaman penuh; waitMs opsional untuk waktu tunggu 0–30000 ms (default 5000).",
+  "min_plan": "free",
+  "status": "active",
+  "params": [
+    { "name": "url", "type": "string", "required": true },
+    { "name": "mode", "type": "string", "required": false },
+    { "name": "fullPage", "type": "boolean", "required": false },
+    { "name": "waitMs", "type": "number", "required": false }
+  ]
+}

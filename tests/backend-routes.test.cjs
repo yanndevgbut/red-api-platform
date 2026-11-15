@@ -17,7 +17,7 @@ test('retired endpoints remain removed and TikTok requires valid input and authe
   try {
     assert.equal((await fetch(base + '/health')).status, 200);
     assert.equal((await fetch(base + '/api/system/stats')).status, 200);
-    assert.equal((await (await fetch(base + '/')).json()).endpoints_count, 4);
+    assert.equal((await (await fetch(base + '/')).json()).endpoints_count, 5);
     assert.equal((await fetch(base + '/api/download/tiktok')).status, 400);
     assert.equal((await fetch(base + '/api/download/tiktok?url=https://example.com')).status, 400);
     assert.equal((await fetch(base + '/api/download/tiktok?url=https://vt.tiktok.com/test')).status, 401);
@@ -31,11 +31,14 @@ test('retired endpoints remain removed and TikTok requires valid input and authe
     assert.equal((await fetch(base + '/api/stalk/ff')).status, 400);
     assert.equal((await fetch(base + '/api/stalk/ff?uid=12345678')).status, 401);
     assert.equal((await fetch(base + '/api/stalk/ff?uid=12345678&uid=87654321')).status, 400);
+    assert.equal((await fetch(base+'/api/tools/ssweb')).status,400);
+    assert.equal((await fetch(base+'/api/tools/ssweb?url=http://127.0.0.1')).status,400);
+    assert.equal((await fetch(base+'/api/tools/ssweb?url=https://example.com')).status,401);
+    assert.equal((await fetch(base+'/api/tools/ssweb?url=https://example.com&mode=wrong')).status,400);
     for (const [method, path] of [
       ['GET', '/api/ai/chat?prompt=test'], ['POST', '/api/ai/gpt'],
       ['GET', '/api/download/instagram?url=https://www.instagram.com/p/test'],
       ['GET', '/api/stalk/ml?userId=123&zoneId=123'],
-      ['GET', '/api/tools/ssweb?url=https://example.com'],
       ['GET', '/api/whatsapp/chinfo?channelUrl=https://whatsapp.com/channel/test'],
     ]) {
       const response = await fetch(base + path, { method, headers: { 'Content-Type': 'application/json', 'x-api-key': 'test-key' }, ...(method === 'POST' ? { body: JSON.stringify({ prompt: 'test' }) } : {}) });
