@@ -45,4 +45,13 @@ router.get('/ytdl', (req,res,next)=>{
   next();
 }, conversionSlots(), require('../middleware/entitlement'), authorize, createHandler());
 
+const instagram = require('../lib/igdl');
+router.get('/igdl',(req,res,next)=>{
+  try {req.instagramInput=instagram.normalizeInput(req.query.url);}catch(error){return res.status(400).json({success:false,error:{code:'INVALID_URL',message:error.message}});}
+  const key=req.get('x-api-key') || req.query.apikey;
+  if(req.query.apikey!==undefined && (typeof req.query.apikey!=='string' || (req.get('x-api-key') && req.query.apikey!==req.get('x-api-key'))))return res.status(401).json({success:false,error:{code:'INVALID_KEY',message:'Gunakan satu API key yang valid.'}});
+  if(typeof key!=='string' || key.length>128 || !/^[a-z0-9_-]+$/i.test(key))return res.status(401).json({success:false,error:{code:'INVALID_KEY',message:'API key diperlukan melalui header x-api-key.'}});
+  next();
+}, require('../middleware/entitlement'), authorize, require('../lib/json-response').createJsonHandler({work:(req,signal)=>instagram.scrapeInstagram(req.instagramInput.source,{signal}),mapError:instagram.errorResponse}));
+
 module.exports = router;

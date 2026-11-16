@@ -117,7 +117,7 @@ export default function DocsAccordion({ defaultKey }: { defaultKey?: string }) {
         fetchOptions.body = JSON.stringify(bodyObj);
       }
 
-      const res = await fetch(url, { ...fetchOptions, redirect: "error", signal: AbortSignal.timeout(ep.path === "/api/download/ytdl" ? 230000 : ep.path === "/api/tools/ssweb" ? 135000 : 25000) });
+      const res = await fetch(url, { ...fetchOptions, redirect: "error", signal: AbortSignal.timeout(ep.path === "/api/download/ytdl" ? 230000 : (ep.path === "/api/tools/ssweb" || ep.path === "/api/download/igdl") ? 135000 : 25000) });
       let body: any;
       try {
         body = await res.json();

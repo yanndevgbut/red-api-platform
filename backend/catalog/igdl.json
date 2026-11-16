@@ -1,0 +1,12 @@
+{
+  "name": "Instagram Downloader (igdl)",
+  "category": "Downloader",
+  "method": "GET",
+  "path": "/api/download/igdl",
+  "description": "Ambil pilihan unduhan gambar, MP4, atau MP3 dari postingan dan Reel Instagram publik melalui TapDL. Format yang tersedia mengikuti media sumber; foto saja atau audio saja tetap diterima.",
+  "min_plan": "free",
+  "status": "active",
+  "params": [
+    { "name": "url", "type": "string", "required": true }
+  ]
+}

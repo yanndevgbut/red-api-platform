@@ -13,6 +13,7 @@ async function proxy(req: NextRequest, { params }: Context) {
 
   const longConversion = path === "/api/download/ytdl" && req.method === "GET";
   const screenshot = path === "/api/tools/ssweb" && req.method === "GET";
+  const instagramDownload = path === "/api/download/igdl" && req.method === "GET";
   try {
     const upstream = new URL(path, process.env.API_BACKEND_URL || "http://127.0.0.1:3016");
     if (upstream.username || upstream.password || (upstream.protocol !== "https:" &&
@@ -52,7 +53,7 @@ async function proxy(req: NextRequest, { params }: Context) {
 
     const response = await fetch(upstream, {
       method: req.method, headers, body, redirect: "manual",
-      cache: "no-store", signal: AbortSignal.any([req.signal, AbortSignal.timeout(longConversion ? 220000 : screenshot ? 125000 : 22000)]),
+      cache: "no-store", signal: AbortSignal.any([req.signal, AbortSignal.timeout(longConversion ? 220000 : screenshot || instagramDownload ? 125000 : 22000)]),
     });
     if (!/^application\/json\b/i.test(response.headers.get("content-type") || "")) {
       await response.body?.cancel();
@@ -60,7 +61,7 @@ async function proxy(req: NextRequest, { params }: Context) {
     }
     return new NextResponse(response.body, {
       status: response.status,
-      headers: { "Content-Type": "application/json", "Cache-Control": longConversion || screenshot ? "no-store, no-transform" : "no-store", ...(longConversion || screenshot ? { "X-Accel-Buffering": "no" } : {}) },
+      headers: { "Content-Type": "application/json", "Cache-Control": longConversion || screenshot || instagramDownload ? "no-store, no-transform" : "no-store", ...(longConversion || screenshot || instagramDownload ? { "X-Accel-Buffering": "no" } : {}) },
     });
   } catch {
     return NextResponse.json({ error: "Node API tidak dapat dijangkau." }, { status: 502 });

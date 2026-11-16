@@ -275,3 +275,32 @@ Chromium kompatibel yang disediakan operator. Dependency browser tetap diperluka
 Untuk development/tests: jalankan `npm ci --prefix backend/ssweb-runtime --ignore-scripts`
 sebelum suite keamanan yang menjalankan capture Chromium pada fixture lokal. Metadata
 katalog berada di `backend/catalog/ssweb.json`.
+
+### Instagram Downloader (igdl)
+
+`GET /api/download/igdl?url=...` memakai scraper TapDL di kategori **Downloader**, paket
+Free. Header `x-api-key` wajib diisi. URL HTTPS Instagram mendukung `/p/`, `/reel/`,
+`/reels/`, dan `/tv/`; tracking/query dibuang sebelum diteruskan ke provider.
+
+```sh
+curl --get 'https://api.redapi.my.id/api/download/igdl' \
+  -H 'x-api-key: YOUR_KEY' \
+  --data-urlencode 'url=https://www.instagram.com/reel/DfenBL6JaTk/'
+```
+
+Respons mengikuti scraper: `success: true` dan `data` dengan `provider`, `shortcode`,
+`source`, serta array `items`. Setiap item berisi judul, uploader, durasi bila tersedia,
+dan grup `downloads.mp4`, `downloads.mp3`, `downloads.image`. Tiap pilihan memuat format,
+label, ukuran (atau null), dan URL. Foto saja, video saja, maupun audio saja diterima;
+API tidak menjanjikan semua format tersedia untuk setiap postingan. File media tidak
+diunduh atau dikonversi oleh server RED API. Link provider dapat kedaluwarsa.
+
+Hanya satu origin tetap `https://www.tapdl.com/wp-json/svd/v1/fetch` yang dihubungi server;
+redirect tidak diikuti. Link hasil dibatasi ke HTTPS tanpa kredensial, port nonstandar,
+alamat IP literal, atau nama host lokal. URL masukan salah ditolak sebelum pemotongan kuota.
+Batas respons provider 2 MiB dan timeout 60 detik. Seperti ytdl/ssweb, konversi/pengambilan
+panjang dapat mengirim whitespace JSON; periksa `success` walaupun HTTP 200. Gateway
+igdl menunggu maksimal 125 detik, tester 135 detik. Provider rate limit menghasilkan kode
+`RATE_LIMITED`; postingan kosong/privat/tidak tersedia tidak menjadi respons sukses.
+
+Metadata katalog untuk instalasi baru tersedia di `backend/catalog/igdl.json`.
