@@ -169,4 +169,5 @@ router.get(
     }),
   }),
 );
+require('./hd')(router, authorize);
 module.exports = router;

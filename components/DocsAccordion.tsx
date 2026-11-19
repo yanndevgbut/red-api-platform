@@ -4,6 +4,7 @@ import React, { useEffect, useState } from "react";
 import { Endpoint } from "@/types";
 import { ChevronDown, Copy, Check, Loader2, Play } from "lucide-react";
 import { API_BASE, isFeaturePath } from "@/lib/api";
+import HdPreview from "@/components/HdPreview";
 import ScreenshotPreview from "@/components/ScreenshotPreview";
 
 export default function DocsAccordion({ defaultKey }: { defaultKey?: string }) {
@@ -16,7 +17,7 @@ export default function DocsAccordion({ defaultKey }: { defaultKey?: string }) {
   // Per-endpoint tester state
   const [apiKeys, setApiKeys] = useState<{ [key: number]: string }>({});
   const [paramValues, setParamValues] = useState<{ [key: string]: string }>({});
-  const [responses, setResponses] = useState<{ [key: number]: { status: number; latency: number; body: any } }>({});
+  const [responses, setResponses] = useState<{ [key: number]: { status: number; latency: number; body: any; apiKey?: string } }>({});
   const [loadingReq, setLoadingReq] = useState<{ [key: number]: boolean }>({});
   const [copiedId, setCopiedId] = useState<number | null>(null);
 
@@ -86,7 +87,7 @@ export default function DocsAccordion({ defaultKey }: { defaultKey?: string }) {
       // Collect params
       if (ep.params && ep.params.length > 0) {
         ep.params.filter(p => p.name !== "apikey").forEach((p) => {
-          const val = paramValues[`${ep.id}_${p.name}`] ?? (ep.path === "/api/tools/ssweb" && p.name === "mode" ? "desktop" : ep.path === "/api/tools/ssweb" && p.name === "fullPage" ? "false" : "");
+          const val = paramValues[`${ep.id}_${p.name}`] ?? (ep.path === "/api/tools/hd" && p.name === "scale" ? "4" : ep.path === "/api/tools/ssweb" && p.name === "mode" ? "desktop" : ep.path === "/api/tools/ssweb" && p.name === "fullPage" ? "false" : "");
           if (ep.method === "GET") {
             queryParams.append(p.name, val);
           }
@@ -117,7 +118,7 @@ export default function DocsAccordion({ defaultKey }: { defaultKey?: string }) {
         fetchOptions.body = JSON.stringify(bodyObj);
       }
 
-      const res = await fetch(url, { ...fetchOptions, redirect: "error", signal: AbortSignal.timeout(ep.path === "/api/download/ytdl" ? 230000 : (ep.path === "/api/tools/ssweb" || ep.path === "/api/download/igdl") ? 135000 : 25000) });
+      const res = await fetch(url, { ...fetchOptions, redirect: "error", signal: AbortSignal.timeout(["/api/download/ytdl", "/api/tools/hd"].includes(ep.path) ? 230000 : (ep.path === "/api/tools/ssweb" || ep.path === "/api/download/igdl") ? 135000 : 25000) });
       let body: any;
       try {
         body = await res.json();
@@ -127,7 +128,7 @@ export default function DocsAccordion({ defaultKey }: { defaultKey?: string }) {
 
       setResponses((prev) => ({
         ...prev,
-        [ep.id]: { status: res.status, latency: Date.now() - startTime, body },
+        [ep.id]: { status: res.status, latency: Date.now() - startTime, body, apiKey },
       }));
     } catch (err: any) {
       setResponses((prev) => ({
@@ -211,6 +212,8 @@ export default function DocsAccordion({ defaultKey }: { defaultKey?: string }) {
           {filteredEndpoints.map((ep) => {
             const isOpen = activeOpenId === ep.id;
             const isScreenshot = ep.path === "/api/tools/ssweb";
+            const isHd = ep.path === "/api/tools/hd";
+            const isImage = isScreenshot || isHd;
             const resData = responses[ep.id];
             const isSubmitting = loadingReq[ep.id] || false;
             const responseFailed = resData && (resData.status >= 400 || resData.body?.success === false || resData.body?.status === false);
@@ -323,7 +326,7 @@ export default function DocsAccordion({ defaultKey }: { defaultKey?: string }) {
                                     </td>
                                     <td className="p-2.5 text-zinc-500 text-[10px]">{p.type}</td>
                                     <td className="p-2.5">
-                                      {isScreenshot && ["mode","fullPage"].includes(p.name) ? <select aria-label={p.name === "mode" ? "Perangkat screenshot" : "Halaman penuh"} value={paramValues[`${ep.id}_${p.name}`] ?? (p.name === "mode" ? "desktop" : "false")} onChange={e=>handleParamChange(ep.id,p.name,e.target.value)} className="w-full rounded border border-surface-border bg-surface-card px-2 py-2 text-xs text-white focus:border-red-600 focus:outline-none">{p.name === "mode" ? <><option value="desktop">Desktop</option><option value="tablet">Tablet</option><option value="hp">HP</option></> : <><option value="false">Area layar</option><option value="true">Halaman penuh</option></>}</select> : <input
+                                      {isHd && p.name === "scale" ? <select aria-label="Skala HD" value={paramValues[`${ep.id}_${p.name}`] ?? "4"} onChange={e=>handleParamChange(ep.id,p.name,e.target.value)} className="w-full rounded border border-surface-border bg-surface-card px-2 py-2 text-xs text-white focus:border-red-600 focus:outline-none"><option value="2">2×</option><option value="4">4×</option></select> : isScreenshot && ["mode","fullPage"].includes(p.name) ? <select aria-label={p.name === "mode" ? "Perangkat screenshot" : "Halaman penuh"} value={paramValues[`${ep.id}_${p.name}`] ?? (p.name === "mode" ? "desktop" : "false")} onChange={e=>handleParamChange(ep.id,p.name,e.target.value)} className="w-full rounded border border-surface-border bg-surface-card px-2 py-2 text-xs text-white focus:border-red-600 focus:outline-none">{p.name === "mode" ? <><option value="desktop">Desktop</option><option value="tablet">Tablet</option><option value="hp">HP</option></> : <><option value="false">Area layar</option><option value="true">Halaman penuh</option></>}</select> : <input
                                         type="text"
                                         aria-label={p.name}
                                         value={paramValues[`${ep.id}_${p.name}`] ?? ""}
@@ -386,8 +389,8 @@ export default function DocsAccordion({ defaultKey }: { defaultKey?: string }) {
                       {/* Response Box */}
                       <div className="space-y-1.5 pt-2">
                         <div className="flex flex-wrap gap-2 items-center justify-between text-xs font-mono-code text-zinc-400">
-                          <span>{isScreenshot ? "PREVIEW SCREENSHOT:" : "LIVE RESPONSE OUTPUT:"}</span>
-                          {resData && !isSubmitting && !isScreenshot && (
+                          <span>{isHd ? "PREVIEW HD:" : isScreenshot ? "PREVIEW SCREENSHOT:" : "LIVE RESPONSE OUTPUT:"}</span>
+                          {resData && !isSubmitting && !isImage && (
                             <button
                               onClick={() => copyResponse(ep.id, resData.body)}
                               className="text-[11px] text-zinc-400 hover:text-white flex items-center gap-1"
@@ -407,8 +410,8 @@ export default function DocsAccordion({ defaultKey }: { defaultKey?: string }) {
                           )}
                         </div>
 
-                        <div aria-busy={isSubmitting} className={`bg-black/95 border border-surface-border rounded-lg p-3.5 font-mono-code text-xs text-zinc-300 min-h-[140px] ${isScreenshot ? "" : "max-h-[300px] overflow-auto"}`}>
-                          {isSubmitting ? <div role="status" aria-live="polite" className="space-y-4 py-3"><div className="flex items-center gap-3 text-red-400"><span className="h-5 w-5 animate-spin motion-reduce:animate-none rounded-full border-2 border-red-900 border-t-red-400" />Menjalankan endpoint, menunggu respons...</div><div aria-hidden="true" className="space-y-2 motion-safe:animate-pulse"><div className="h-2 w-4/5 rounded bg-zinc-800" /><div className="h-2 w-3/5 rounded bg-zinc-800" /><div className="h-2 w-2/5 rounded bg-zinc-800" /></div></div> : isScreenshot ? <ScreenshotPreview response={resData?.body}/> : <pre className="whitespace-pre-wrap break-words">
+                        <div aria-busy={isSubmitting} className={`bg-black/95 border border-surface-border rounded-lg p-3.5 font-mono-code text-xs text-zinc-300 min-h-[140px] ${isImage ? "" : "max-h-[300px] overflow-auto"}`}>
+                          {isSubmitting ? <div role="status" aria-live="polite" className="space-y-4 py-3"><div className="flex items-center gap-3 text-red-400"><span className="h-5 w-5 animate-spin motion-reduce:animate-none rounded-full border-2 border-red-900 border-t-red-400" />Menjalankan endpoint, menunggu respons...</div><div aria-hidden="true" className="space-y-2 motion-safe:animate-pulse"><div className="h-2 w-4/5 rounded bg-zinc-800" /><div className="h-2 w-3/5 rounded bg-zinc-800" /><div className="h-2 w-2/5 rounded bg-zinc-800" /></div></div> : isHd ? <HdPreview response={resData?.body} apiKey={resData?.apiKey}/> : isScreenshot ? <ScreenshotPreview response={resData?.body}/> : <pre className="whitespace-pre-wrap break-words">
                             <code>
                               {resData
                                 ? JSON.stringify(resData.body, null, 2)

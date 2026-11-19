@@ -11,7 +11,7 @@ async function proxy(req: NextRequest, { params }: Context) {
     return NextResponse.json({ error: "Endpoint tidak ditemukan." }, { status: 404 });
   }
 
-  const longConversion = path === "/api/download/ytdl" && req.method === "GET";
+  const longConversion = ["/api/download/ytdl", "/api/tools/hd"].includes(path) && req.method === "GET";
   const screenshot = path === "/api/tools/ssweb" && req.method === "GET";
   const instagramDownload = path === "/api/download/igdl" && req.method === "GET";
   try {

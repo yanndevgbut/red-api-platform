@@ -7,7 +7,7 @@ export function middleware(request: NextRequest) {
   const csp = [
     "default-src 'self'", `script-src 'self' 'nonce-${nonce}'${process.env.NODE_ENV === "development" ? " 'unsafe-eval'" : ""}`,
     "style-src 'self' 'unsafe-inline'", "img-src 'self' data: blob: https:", "font-src 'self'",
-    `connect-src 'self' ${supabase} ${websocket}`, "object-src 'none'", "base-uri 'self'", "frame-ancestors 'none'", "form-action 'self'",
+    `connect-src 'self' https://api.redapi.my.id ${supabase} ${websocket}`, "object-src 'none'", "base-uri 'self'", "frame-ancestors 'none'", "form-action 'self'",
   ].join("; ");
   const headers = new Headers(request.headers);
   headers.set("x-nonce", nonce); headers.set("Content-Security-Policy", csp);

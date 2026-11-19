@@ -304,3 +304,46 @@ igdl menunggu maksimal 125 detik, tester 135 detik. Provider rate limit menghasi
 `RATE_LIMITED`; postingan kosong/privat/tidak tersedia tidak menjadi respons sukses.
 
 Metadata katalog untuk instalasi baru tersedia di `backend/catalog/igdl.json`.
+
+### Image HD (hd)
+
+`GET /api/tools/hd?url=...&scale=4` tersedia di kategori **Tools**, paket Free.
+Kirim header `x-api-key`. `url` harus berupa URL HTTP/HTTPS gambar publik; file lokal
+server tidak dapat diakses. `scale` menerima `2` atau `4` (default `4`). Tester
+menampilkan preview dan tombol **Unduh PNG**, dengan URL input tetap kosong.
+
+```sh
+curl --get 'https://api.redapi.my.id/api/tools/hd' \
+  -H 'x-api-key: YOUR_KEY' \
+  --data-urlencode 'url=https://example.com/image.png' \
+  --data-urlencode 'scale=2'
+```
+
+Scraper memakai FreeUpscaler melalui browser terisolasi. Input PNG/JPEG/WebP statis
+maksimal 10 MiB, hasil maksimal 16.777.216 piksel dan sisi 8192 px; artinya input
+maksimal sekitar 1 MP untuk 4x atau 4 MP untuk 2x. Ukuran dan isi gambar divalidasi
+melalui Sharp sebelum browser dibuka. Input dan setiap redirect hanya boleh menuju
+IP publik yang sudah diperiksa dan dipakai langsung untuk koneksi. Browser memakai
+proxy egress publik seperti ssweb, tanpa kredensial server, dengan batas 180 MiB
+unduhan dan 16 MiB unggahan. Satu proses HD berjalan bersamaan; timeout 180 detik.
+Gateway menunggu 220 detik, tester 230 detik. Respons dapat berisi whitespace
+keepalive; selalu periksa `success`, termasuk saat HTTP 200.
+
+Hasil mengikuti scraper: `data.provider`, `scale_requested`, `scale_actual`, `input`,
+`elapsed_seconds`, dan `image` dengan dimensi, ukuran, serta tipe PNG. Hasil sampai
+3 MiB menyertakan `image.encoding: "base64"` dan `image.base64`. Hasil lebih besar
+(maksimal 64 MiB) memakai `image.encoding: "url"`. Semua hasil memiliki `image.url`
+dan `expires_at`; URL berlaku 10 menit. Unduh langsung melalui origin API dengan
+header `x-api-key`, tanpa biaya kuota tambahan. Key harus aktif dan milik akun yang
+membuat hasil; key dicabut, akun diblokir, atau akun lain tidak dapat mengambilnya.
+Jangan menaruh API key dalam URL gambar. Tester memuat file besar langsung dari
+origin API yang tetap, sehingga hasil tidak melewati batas payload Vercel.
+
+URL/parameter/gambar tidak valid, runtime belum siap, kapasitas proses penuh, atau
+penyimpanan penuh ditolak sebelum kuota dipotong. Proses yang diterima memakai satu
+kuota, termasuk bila provider kemudian gagal. Pembatalan client menutup browser dan
+melepaskan kapasitas setelah cleanup. File hasil berada di `backend/data/hd-results`
+dan dibersihkan otomatis; batas penyimpanan 512 MiB/64 hasil. Dependency validasi
+terpisah dalam `backend/hd-runtime` dan disiapkan di background saat startup, tanpa
+mengganti dependency backend. Untuk tests jalankan `npm ci --prefix backend/hd-runtime
+--ignore-scripts`. Metadata katalog tersedia di `backend/catalog/hd.json`.

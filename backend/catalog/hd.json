@@ -1,0 +1,13 @@
+{
+  "name": "Image HD (hd)",
+  "category": "Tools",
+  "method": "GET",
+  "path": "/api/tools/hd",
+  "description": "Perbesar gambar PNG, JPEG, atau WebP menjadi 2x atau 4x (default 4x). Input maksimum 10 MB; hasil maksimum 16 megapiksel dan sisi 8192 px. Unduhan PNG dengan API key berlaku 10 menit. Proses dapat memerlukan hingga 180 detik.",
+  "min_plan": "free",
+  "status": "active",
+  "params": [
+    { "name": "url", "type": "string", "required": true },
+    { "name": "scale", "type": "number", "required": false }
+  ]
+}

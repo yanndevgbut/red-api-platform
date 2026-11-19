@@ -85,6 +85,8 @@ async function startEgressProxy({
   resolve = resolvePublic,
   connect = (options) => net.connect(options),
   requestImpl = http.request,
+  maxDownloadBytes = 40 * 1024 * 1024,
+  maxUploadBytes = 8 * 1024 * 1024,
 } = {}) {
   const sockets = new Set();
   let closed = false,
@@ -110,11 +112,11 @@ async function startEgressProxy({
   }
   function budget(chunk) {
     bytes += chunk.length;
-    if (bytes > 40 * 1024 * 1024) stopTraffic('TRANSFER_LIMIT');
+    if (bytes > maxDownloadBytes) stopTraffic('TRANSFER_LIMIT');
   }
   function uploadBudget(chunk) {
     uploaded += chunk.length;
-    if (uploaded > 8 * 1024 * 1024) stopTraffic('TRANSFER_LIMIT');
+    if (uploaded > maxUploadBytes) stopTraffic('TRANSFER_LIMIT');
   }
   const server = http.createServer(async (req, res) => {
     try {
