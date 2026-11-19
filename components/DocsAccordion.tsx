@@ -4,6 +4,7 @@ import React, { useEffect, useState } from "react";
 import { Endpoint } from "@/types";
 import { ChevronDown, Copy, Check, Loader2, Play } from "lucide-react";
 import { API_BASE, isFeaturePath } from "@/lib/api";
+import EndpointCodeExample from "@/components/EndpointCodeExample";
 import HdPreview from "@/components/HdPreview";
 import ScreenshotPreview from "@/components/ScreenshotPreview";
 
@@ -421,6 +422,7 @@ export default function DocsAccordion({ defaultKey }: { defaultKey?: string }) {
                         </div>
                       </div>
 
+                      <EndpointCodeExample endpoint={ep} />
                     </div>
                   </div>
                 </div>
