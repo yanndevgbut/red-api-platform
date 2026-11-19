@@ -1,0 +1,16 @@
+{
+  "name": "TikTok Stalk (stalktt)",
+  "category": "Stalk",
+  "method": "GET",
+  "path": "/api/stalk/stalktt",
+  "description": "Lihat profil publik TikTok melalui Countik: nama, bio, avatar, followers, following, likes, dan jumlah video. Parameter username menerima nama akun dengan atau tanpa @. Data dapat berasal dari cache provider; field yang tidak tersedia bernilai null. Sementara maintenance: Countik membalas HTTP 403 dari server produksi.",
+  "min_plan": "free",
+  "status": "maintenance",
+  "params": [
+    {
+      "name": "username",
+      "type": "string",
+      "required": true
+    }
+  ]
+}

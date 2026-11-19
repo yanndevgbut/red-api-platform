@@ -347,3 +347,43 @@ dan dibersihkan otomatis; batas penyimpanan 512 MiB/64 hasil. Dependency validas
 terpisah dalam `backend/hd-runtime` dan disiapkan di background saat startup, tanpa
 mengganti dependency backend. Untuk tests jalankan `npm ci --prefix backend/hd-runtime
 --ignore-scripts`. Metadata katalog tersedia di `backend/catalog/hd.json`.
+
+### TikTok Stalk (stalktt)
+
+`GET /api/stalk/stalktt?username=tiktok` tersedia di kategori **Stalk**, paket Free.
+Kirim header `x-api-key`. Username menerima nama akun dengan atau tanpa `@`, maksimal
+24 karakter huruf, angka, titik, atau underscore; karakter terakhir tidak boleh titik.
+Username tidak menerima URL profil. Nilai salah ditolak sebelum kuota dipotong.
+
+```sh
+curl --get 'https://api.redapi.my.id/api/stalk/stalktt' \
+  --header 'x-api-key: YOUR_API_KEY' \
+  --data-urlencode 'username=tiktok'
+```
+
+Respons `success: true` berisi `data` dengan username, nama tampilan, bio, URL profil,
+ID, avatar, bahasa/negara jika tersedia, serta `stats.followers`, `following`, `likes`,
+dan `videos`. Angka string yang melampaui presisi JavaScript tetap berupa string.
+Nilai yang tidak tersedia menjadi `null`; `completeness` mencatat field yang belum
+lengkap. `source_cached` dan `verified_reported` mengikuti laporan Countik. Endpoint
+mengambil data yang disediakan provider, tanpa login TikTok atau akses konten privat.
+
+Origin provider tetap `https://countik.com/api/exist/USERNAME`, redirect API ditolak,
+respons dibatasi 1 MiB dan timeout total 30 detik. Jika request langsung mendapat
+403, backend mencoba sesi browser Countik biasa menggunakan Chromium terisolasi
+dan proxy egress publik yang sama dengan ssweb. Sesi browser tidak mengirim
+kredensial aplikasi; jika provider tetap menolak, respons `PROVIDER_BLOCKED`
+dengan HTTP 503. Satu request diproses bersamaan; kapasitas penuh ditolak sebelum
+kuota dipotong. Gateway menunggu 45 detik dan tester
+55 detik. Whitespace keepalive mempertahankan satu dokumen JSON; periksa `success`
+meski HTTP 200. Akun tidak ditemukan menghasilkan `USER_NOT_FOUND`, batas permintaan
+provider `RATE_LIMITED`, dan profil akun yang berbeda ditolak. Request valid yang
+sudah diterima memakai satu kuota, termasuk saat provider kemudian gagal. Metadata
+katalog tersedia di `backend/catalog/stalktt.json`; contoh cURL/JavaScript/Python di
+tester memakai username contoh dan tidak mengisi kolom input pengguna.
+
+Status rollout awal `stalktt` adalah **maintenance**: Countik membalas HTTP 403
+untuk request langsung maupun sesi browser dari server produksi. Akses endpoint
+menolak request sebelum pemotongan kuota selama status katalog belum `active`,
+termasuk pada node yang masih memakai RPC kuota lama. Setelah akses Countik dari
+server pulih, operator dapat mengaktifkan endpoint melalui registry admin.

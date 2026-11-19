@@ -17,7 +17,7 @@ test('retired endpoints remain removed and TikTok requires valid input and authe
   try {
     assert.equal((await fetch(base + '/health')).status, 200);
     assert.equal((await fetch(base + '/api/system/stats')).status, 200);
-    assert.equal((await (await fetch(base + '/')).json()).endpoints_count, 7);
+    assert.equal((await (await fetch(base + '/')).json()).endpoints_count, 8);
     assert.equal((await fetch(base + '/api/download/tiktok')).status, 400);
     assert.equal((await fetch(base + '/api/download/tiktok?url=https://example.com')).status, 400);
     assert.equal((await fetch(base + '/api/download/tiktok?url=https://vt.tiktok.com/test')).status, 401);
@@ -32,6 +32,10 @@ test('retired endpoints remain removed and TikTok requires valid input and authe
     assert.equal((await fetch(base + '/api/download/pindl?url=https://example.com')).status,400);
     assert.equal((await fetch(base + '/api/download/pindl?url=https://www.pinterest.com/pin/123/')).status,401);
     assert.equal((await fetch(base + '/api/download/pindl?url=https://www.pinterest.com/pin/123/&url=https://pin.it/test')).status,400);
+    assert.equal((await fetch(base + '/api/stalk/stalktt')).status,400);
+    assert.equal((await fetch(base + '/api/stalk/stalktt?username=@tiktok')).status,401);
+    assert.equal((await fetch(base + '/api/stalk/stalktt?username=tiktok&username=other')).status,400);
+    assert.equal((await fetch(base + '/api/stalk/stalktt?username=https://localhost/')).status,400);
     assert.equal((await fetch(base + '/api/stalk/ff')).status, 400);
     assert.equal((await fetch(base + '/api/stalk/ff?uid=12345678')).status, 401);
     assert.equal((await fetch(base + '/api/stalk/ff?uid=12345678&uid=87654321')).status, 400);

@@ -6,6 +6,7 @@ type Value = string | number | boolean;
 const API_ORIGIN = "https://api.redapi.my.id";
 
 const samples: Record<string, Record<string, Value>> = {
+  "/api/stalk/stalktt": { username: "tiktok" },
   "/api/download/tiktok": { url: "https://vt.tiktok.com/ZS9ChQ9WD/" },
   "/api/download/igdl": { url: "https://www.instagram.com/reel/DfenBL6JaTk/" },
   "/api/download/pindl": {
@@ -69,7 +70,9 @@ export function requestExample(
     ? 230
     : ["/api/tools/ssweb", "/api/download/igdl"].includes(endpoint.path)
       ? 135
-      : 30;
+      : endpoint.path === "/api/stalk/stalktt"
+        ? 55
+        : 30;
 
   if (language === "curl") {
     const lines = [
