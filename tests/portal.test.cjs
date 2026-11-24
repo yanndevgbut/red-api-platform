@@ -118,11 +118,6 @@ const png =
 test('announcements, private receipts, manual approvals, expiry, delete users and maintenance controls', async () => {
   const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'red-portal-'));
   process.env.OPERATIONS_FILE = path.join(dir, 'operations.json');
-  process.env.HANDOFF_DIR = path.join(dir, 'handoff');
-  await fs.mkdir(process.env.HANDOFF_DIR);
-  const ownerFile = path.join(process.env.HANDOFF_DIR, 'owner-id');
-  await fs.writeFile(path.join(process.env.HANDOFF_DIR, 'RED-API-HANDOFF.md'), '# Private guide');
-  await fs.writeFile(path.join(process.env.HANDOFF_DIR, 'RED-API-KREDENSIAL.md'), '# Placeholder only');
   const store = require('../backend/lib/operations-store');
   const billing = require('../backend/lib/billing');
   const maintenance = require('../backend/lib/maintenance-state');
@@ -150,20 +145,6 @@ test('announcements, private receipts, manual approvals, expiry, delete users an
       ...(body ? { body: JSON.stringify(body) } : {}),
     });
   try {
-    const handoffPath = '/api/portal/handoff';
-    assert.equal((await req(null, handoffPath+'/guide')).status, 401);
-    assert.equal((await req('member', handoffPath+'/guide')).status, 403);
-    await fs.writeFile(ownerFile, ids.member);
-    assert.equal((await req('admin', handoffPath+'/guide')).status, 403);
-    assert.equal((await req('other', handoffPath+'/credentials')).status, 403);
-    assert.equal((await req('banned', handoffPath+'/guide')).status, 403);
-    const attachment = await req('member', handoffPath+'/guide');
-    assert.equal(attachment.status, 200);
-    assert.equal(attachment.headers.get('cache-control'), 'private, no-store');
-    assert.deepEqual(await attachment.json(), {filename:'RED-API-HANDOFF.md',content:'# Private guide'});
-    assert.equal(await (await req('member', handoffPath+'/credentials')).json().then(value=>value.content), '# Placeholder only');
-    assert.equal((await req('member', handoffPath+'/owner-id')).status, 404);
-
     const reportPath = '/api/portal/bug-reports';
     const reportAdminPath = '/api/portal/admin/bug-reports';
     const reportBody = { category: 'endpoint', title: 'Endpoint tidak merespons', description: 'Jalankan endpoint contoh lalu tunggu respons.' };

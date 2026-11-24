@@ -16,21 +16,10 @@ export default function AuthCallbackPage() {
     const timeout = setTimeout(() => {
       if (!disposed) setErrorMsg("Sesi login belum diterima. Silakan kembali dan coba login lagi.");
     }, 15000);
-    let finished = false;
     const finish = () => {
-      if (disposed || finished) return;
-      finished = true;
+      if (disposed) return;
       clearTimeout(timeout);
-      let next = "/?tab=profile";
-      try {
-        if (sessionStorage.getItem("red-api-login-handoff") === "1") {
-          sessionStorage.removeItem("red-api-login-handoff");
-          next = "/handoff";
-        }
-      } catch {
-        // Login still works when browser storage is unavailable.
-      }
-      router.replace(next);
+      router.replace("/?tab=profile");
     };
     try {
       const query = new URLSearchParams(window.location.search);
