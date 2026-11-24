@@ -5,103 +5,97 @@ import { TelemetryData } from "@/types";
 import { usePollingResource } from "@/lib/use-polling-resource";
 
 export default function TelemetryWidget() {
-  const fetchStats = useCallback(
-    async (signal: AbortSignal): Promise<TelemetryData> => {
-      const res = await fetch("/api/telemetry", { signal, cache: "no-store" });
-      if (!res.ok) throw new Error("Telemetry unavailable");
-      const json = await res.json();
-      if (
-        !json.status ||
-        !json.data?.cpu ||
-        !json.data?.memory ||
-        !json.data?.uptime ||
-        !Number.isFinite(json.data.cpu.usage_percent) ||
-        !Number.isFinite(json.data.memory.usage_percent)
-      )
-        throw new Error("Invalid telemetry");
-      return json.data;
-    },
-    [],
-  );
-  const {
-    data: telemetry,
-    error,
-    loading,
-    refreshing,
-    reload,
-  } = usePollingResource(fetchStats, 5000, 8000);
-  const status = loading
-    ? "Memeriksa status…"
-    : error
-      ? "Status belum terverifikasi"
-      : "Server merespons";
-  return (
-    <section
-      aria-labelledby="server-status-heading"
-      className="min-w-0 rounded-xl border border-surface-border bg-surface-panel p-4 sm:p-5"
-    >
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <h2
-          id="server-status-heading"
-          className="font-bebas text-2xl leading-none text-white"
-        >
-          Status layanan
-        </h2>
-        <span
-          className={`inline-flex items-center gap-2 text-sm ${error || loading ? "text-zinc-300" : "text-emerald-300"}`}
-        >
-          <span
-            aria-hidden="true"
-            className={`h-2 w-2 rounded-full ${error || loading ? "bg-zinc-500" : "bg-emerald-400"}`}
-          />
-          {status}
-        </span>
-      </div>
-      {error && (
-        <div className="mt-2 flex flex-wrap items-center justify-between gap-2 text-sm text-zinc-400">
-          <p>
-            {telemetry
-              ? "Detail di bawah ini berasal dari pembaruan terakhir."
-              : "Statistik server belum dapat dimuat."}
-          </p>
-          <button
-            type="button"
-            onClick={reload}
-            disabled={refreshing}
-            className="min-h-9 rounded-lg border border-surface-border px-3 text-sm text-zinc-200 disabled:opacity-60"
-          >
-            Periksa lagi
-          </button>
-        </div>
-      )}
-      {telemetry && (
-        <details className="mt-3 border-t border-surface-border pt-3">
-          <summary className="cursor-pointer text-sm text-zinc-300">
-            Detail server
-          </summary>
-          <dl className="mt-4 grid grid-cols-2 gap-3 text-sm sm:grid-cols-4">
-            <Metric label="CPU" value={`${telemetry.cpu.usage_percent}%`} />
-            <Metric
-              label="Memori"
-              value={`${telemetry.memory.used_gb} / ${telemetry.memory.total_gb} GB`}
-            />
-            <Metric
-              label="Runtime"
-              value={`${telemetry.platform} · Node.js ${telemetry.node_version}`}
-            />
-            <Metric label="Waktu aktif" value={telemetry.uptime.formatted} />
-          </dl>
-        </details>
-      )}
-    </section>
-  );
-}
+  const fetchStats = useCallback(async (signal: AbortSignal): Promise<TelemetryData> => {
+    const res = await fetch("/api/telemetry", { signal, cache: "no-store" });
+    if (!res.ok) throw new Error("Telemetry unavailable");
+    const json = await res.json();
+    if (!json.status || !json.data?.cpu || !json.data?.memory || !json.data?.uptime || !Number.isFinite(json.data.cpu.usage_percent) || !Number.isFinite(json.data.memory.usage_percent)) throw new Error("Invalid telemetry");
+    return json.data;
+  }, []);
+  const { data: telemetry, error, loading, refreshing, reload } = usePollingResource(fetchStats, 5000, 8000);
+  const placeholder = loading ? "Memuat..." : "Tidak tersedia";
 
-function Metric({ label, value }: { label: string; value: string }) {
   return (
-    <div className="min-w-0 rounded-lg border border-surface-border p-3">
-      <dt className="text-xs text-zinc-400">{label}</dt>
-      <dd className="mt-1 break-words font-medium text-white">{value}</dd>
+    <div className="space-y-4">
+      <div className="flex flex-wrap gap-3 items-center justify-between">
+        <div className="flex min-w-0 items-center gap-2">
+          <span className="w-2.5 h-2.5 shrink-0 bg-red-600 rounded-full" />
+          <h2 className="font-bebas text-3xl tracking-wide text-white">STATUS SERVER</h2>
+        </div>
+        <span className="text-xs font-mono-code text-zinc-500">REALTIME MONITOR</span>
+      </div>
+
+      <div role="status" className="flex flex-wrap items-center justify-between gap-3 text-xs font-mono-code text-zinc-400">
+        <span>{error ? `${error}${telemetry ? " Menampilkan data terakhir; data mungkin kedaluwarsa." : " Statistik server belum tersedia."}` : telemetry ? "Statistik server berhasil diperbarui." : "Menghubungkan ke server..."}</span>
+        <button type="button" onClick={reload} disabled={refreshing} className="rounded border border-surface-border px-3 py-2 disabled:opacity-50">{refreshing ? "Memperbarui..." : "Coba lagi / Refresh"}</button>
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* Metric 1: CPU */}
+        <div className="bg-surface-panel border border-surface-border p-4 rounded-lg space-y-2 hover:border-red-900/60 transition-colors">
+          <div className="flex justify-between items-center text-xs font-mono-code text-zinc-400">
+            <span>CPU LOAD</span>
+            <span className="text-red-400 font-bold">
+              {telemetry ? `${telemetry.cpu.usage_percent}%` : placeholder}
+            </span>
+          </div>
+          <div className="w-full bg-zinc-900 h-2 rounded overflow-hidden">
+            <div
+              className="bg-red-600 h-full transition-all duration-500"
+              style={{ width: `${telemetry ? Math.max(0, Math.min(100, telemetry.cpu.usage_percent)) : 0}%` }}
+            />
+          </div>
+          <span className="text-[10px] font-mono-code text-zinc-500 truncate block">
+            {telemetry ? `${telemetry.cpu.model} (${telemetry.cpu.cores} Cores)` : "—"}
+          </span>
+        </div>
+
+        {/* Metric 2: RAM */}
+        <div className="bg-surface-panel border border-surface-border p-4 rounded-lg space-y-2 hover:border-red-900/60 transition-colors">
+          <div className="flex justify-between items-center text-xs font-mono-code text-zinc-400">
+            <span>MEMORY USAGE</span>
+            <span className="text-zinc-200 font-bold">
+              {telemetry ? `${telemetry.memory.used_gb} / ${telemetry.memory.total_gb} GB` : placeholder}
+            </span>
+          </div>
+          <div className="w-full bg-zinc-900 h-2 rounded overflow-hidden">
+            <div
+              className="bg-red-700 h-full transition-all duration-500"
+              style={{ width: `${telemetry ? Math.max(0, Math.min(100, telemetry.memory.usage_percent)) : 0}%` }}
+            />
+          </div>
+          <span className="text-[10px] font-mono-code text-zinc-500 block">
+            {telemetry ? (telemetry.memory.total_gb === "—" ? "Batas RAM tidak disediakan panel" : `Utilization: ${telemetry.memory.usage_percent}% Allocated`) : "—"}
+          </span>
+        </div>
+
+        {/* Metric 3: Node Engine */}
+        <div className="bg-surface-panel border border-surface-border p-4 rounded-lg space-y-2 hover:border-red-900/60 transition-colors">
+          <div className="flex justify-between items-center text-xs font-mono-code text-zinc-400">
+            <span>NODE INSTANCE</span>
+            <span className="text-zinc-300 font-bold">{telemetry && !error ? "TERHUBUNG" : "BELUM TERVERIFIKASI"}</span>
+          </div>
+          <div className="font-bebas text-4xl text-white tracking-wide truncate">
+            {telemetry ? telemetry.node : "—"}
+          </div>
+          <span className="text-[10px] font-mono-code text-zinc-500 block">
+            {telemetry ? `${telemetry.platform} · ${telemetry.node_version}` : "—"}
+          </span>
+        </div>
+
+        {/* Metric 4: Uptime */}
+        <div className="bg-surface-panel border border-surface-border p-4 rounded-lg space-y-2 hover:border-red-900/60 transition-colors">
+          <div className="flex justify-between items-center text-xs font-mono-code text-zinc-400">
+            <span>SYSTEM UPTIME</span>
+            <span className="text-zinc-300 font-bold">{telemetry && !error ? "ONLINE" : "—"}</span>
+          </div>
+          <div className="font-bebas text-4xl text-white tracking-wide">
+            {telemetry ? telemetry.uptime.formatted : placeholder}
+          </div>
+          <span className="text-[10px] font-mono-code text-zinc-500 block">
+            Waktu aktif server
+          </span>
+        </div>
+      </div>
     </div>
   );
 }

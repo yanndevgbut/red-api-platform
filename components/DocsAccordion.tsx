@@ -45,7 +45,7 @@ export default function DocsAccordion({ defaultKey }: { defaultKey?: string }) {
         if (!response.ok) throw new Error("Categories unavailable");
         const data = await response.json();
         if (!controller.signal.aborted) setCategories(["ALL", ...data.categories]);
-      }).catch(() => { if (!controller.signal.aborted) setCategoryError("Kategori belum dapat dimuat. Semua endpoint tetap dapat ditampilkan."); });
+      }).catch(() => { if (!controller.signal.aborted) setCategoryError("Kategori belum dapat dimuat. Filter ALL tetap tersedia."); });
     void loadEndpoints();
     return () => controller.abort();
   }, []);
@@ -54,8 +54,8 @@ export default function DocsAccordion({ defaultKey }: { defaultKey?: string }) {
   const filteredEndpoints = endpoints.filter((ep) => {
     const matchCat = selectedCat === "ALL" || ep.category === selectedCat;
     const matchSearch =
-      ep.name.toLowerCase().includes(search.trim().toLowerCase()) ||
-      ep.path.toLowerCase().includes(search.trim().toLowerCase());
+      ep.name.toLowerCase().includes(search.toLowerCase()) ||
+      ep.path.toLowerCase().includes(search.toLowerCase());
     return matchCat && matchSearch;
   });
 
@@ -137,7 +137,7 @@ export default function DocsAccordion({ defaultKey }: { defaultKey?: string }) {
         [ep.id]: {
           status: 500,
           latency: Date.now() - startTime,
-          body: { error: err.message || "API belum dapat dijangkau." },
+          body: { error: err.message || "Failed to reach backend node." },
         },
       }));
     } finally {
@@ -160,20 +160,19 @@ export default function DocsAccordion({ defaultKey }: { defaultKey?: string }) {
       {/* Search & Category Filter */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-surface-border pb-4">
         <div>
-          <h1 className="font-bebas text-4xl leading-none text-white sm:text-5xl">Dokumentasi API</h1>
+          <h2 className="font-bebas text-4xl tracking-wide text-white">DOKUMENTASI & TESTER</h2>
           <p className="text-xs font-mono-code text-zinc-400">
-            Buka endpoint untuk mencoba request atau menyalin contoh kode.
+            Pilih endpoint, isi parameter, lalu kirim request untuk melihat responsnya.
           </p>
         </div>
 
         <div className="relative w-full sm:w-72">
           <input
-            type="search"
-            aria-label="Cari endpoint"
+            type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Cari endpoint atau path..."
-            className="min-h-11 w-full bg-surface-card border border-surface-border px-3 py-2 text-base sm:text-sm text-white rounded-lg focus:outline-none focus:border-red-600 placeholder:text-zinc-400 transition-colors"
+            className="w-full bg-surface-card border border-surface-border px-3 py-2 text-xs font-mono-code text-white rounded focus:outline-none focus:border-red-600 placeholder:text-zinc-600 transition-colors"
           />
         </div>
       </div>
@@ -188,11 +187,11 @@ export default function DocsAccordion({ defaultKey }: { defaultKey?: string }) {
             aria-pressed={selectedCat === cat}
             className={`shrink-0 snap-start whitespace-nowrap px-3 py-2 rounded text-xs font-mono-code transition-all ${
               selectedCat === cat
-                ? "border border-red-700 bg-red-950/70 font-semibold text-red-100"
+                ? "bg-red-600 text-black font-bold shadow-[0_0_12px_rgba(220,38,38,0.4)]"
                 : "bg-surface-card text-zinc-400 border border-surface-border hover:border-zinc-500"
             }`}
           >
-            {cat === "ALL" ? "Semua" : cat}
+            {cat.toUpperCase()}
           </button>
         ))}
       </div>
@@ -203,7 +202,7 @@ export default function DocsAccordion({ defaultKey }: { defaultKey?: string }) {
       ) : loading ? (
         <div className="p-8 text-center text-xs font-mono-code text-zinc-500 flex items-center justify-center gap-2">
           <Loader2 className="w-4 h-4 animate-spin text-red-500" />
-          Memuat daftar endpoint…
+          Loading endpoints from Supabase registry...
         </div>
       ) : filteredEndpoints.length === 0 ? (
         <div className="p-8 text-center bg-surface-panel border border-surface-border rounded-lg text-xs font-mono-code text-zinc-500">
@@ -226,7 +225,7 @@ export default function DocsAccordion({ defaultKey }: { defaultKey?: string }) {
                 key={ep.id}
                 className={`bg-surface-panel border ${
                   isOpen
-                    ? "border-red-700"
+                    ? "border-red-600/80 shadow-[0_0_20px_rgba(220,38,38,0.15)]"
                     : "border-surface-border hover:border-zinc-700"
                 } rounded-lg overflow-hidden transition-all duration-200`}
               >
@@ -248,10 +247,9 @@ export default function DocsAccordion({ defaultKey }: { defaultKey?: string }) {
                     >
                       {ep.method}
                     </span>
-                    <div className="min-w-0 space-y-1">
-                      <div className="break-words text-sm font-semibold text-white">{ep.name}</div>
+                    <div className="min-w-0">
                       <div className="flex flex-wrap items-center gap-2">
-                        <span className="break-all font-mono-code text-xs text-zinc-300">{ep.path}</span>
+                        <span className="font-mono-code text-sm font-bold text-white">{ep.path}</span>
                         <span
                           className={`text-[10px] font-mono-code px-2 py-0.2 rounded ${
                             ep.min_plan === "vip" || ep.min_plan === "enterprise"
@@ -261,9 +259,10 @@ export default function DocsAccordion({ defaultKey }: { defaultKey?: string }) {
                         >
                           {ep.min_plan.toUpperCase()}
                         </span>
-                        {ep.status === "maintenance" && <span className="text-xs text-amber-300">Pemeliharaan</span>}
                       </div>
-
+                      <div className="text-xs text-zinc-400 mt-0.5">
+                        {ep.name}: {ep.description}
+                      </div>
                     </div>
                   </div>
 
@@ -286,60 +285,86 @@ export default function DocsAccordion({ defaultKey }: { defaultKey?: string }) {
                   <div className="accordion-inner">
                     <div className="min-w-0 p-3 sm:p-5 border-t border-surface-border bg-black/60 space-y-5">
                       
-                      <p className="break-words text-sm leading-relaxed text-zinc-300">{ep.description}</p>
                       {/* API Key */}
                       <div className="text-xs font-mono-code">
                         <div className="space-y-1">
-                          <label className="text-zinc-400">API key</label>
+                          <label className="text-zinc-400">AUTHENTICATION (API KEY)</label>
                           <input
                             type="text"
                             autoComplete="off"
                             aria-label="API key"
                             value={apiKeys[ep.id] ?? defaultKey ?? ""}
                             onChange={(e) => handleApiKeyChange(ep.id, e.target.value)}
-                            placeholder="Masukkan API key"
-                            className="min-h-11 w-full bg-surface-card border border-surface-border px-3 py-2 rounded-lg text-base sm:text-sm text-red-300 focus:outline-none focus:border-red-600"
+                            placeholder="Enter your API key..."
+                            className="w-full bg-surface-card border border-surface-border px-3 py-1.5 rounded text-red-300 focus:outline-none focus:border-red-600"
                           />
                         </div>
                       </div>
 
-                      {ep.params?.some(p => p.name !== "apikey") && (
-                        <fieldset className="space-y-3">
-                          <legend className="mb-2 text-sm font-semibold text-white">Parameter</legend>
-                          {ep.params.filter(p => p.name !== "apikey").map(p => (
-                            <label key={p.name} className="grid min-w-0 gap-2 rounded-lg border border-surface-border bg-surface-panel p-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,2fr)] sm:items-center">
-                              <span className="min-w-0">
-                                <span className="block break-words font-mono-code text-sm text-zinc-200">{p.name}</span>
-                                <span className="block text-xs text-zinc-400">{p.type} · {p.required ? "Wajib" : "Opsional"}</span>
-                              </span>
-                                      {isHd && p.name === "scale" ? <select aria-label="Skala HD" value={paramValues[`${ep.id}_${p.name}`] ?? "4"} onChange={e=>handleParamChange(ep.id,p.name,e.target.value)} className="min-h-11 w-full rounded-lg border border-surface-border bg-surface-card px-3 py-2 text-base sm:text-sm text-white focus:border-red-600 focus:outline-none"><option value="2">2×</option><option value="4">4×</option></select> : isScreenshot && ["mode","fullPage"].includes(p.name) ? <select aria-label={p.name === "mode" ? "Perangkat screenshot" : "Halaman penuh"} value={paramValues[`${ep.id}_${p.name}`] ?? (p.name === "mode" ? "desktop" : "false")} onChange={e=>handleParamChange(ep.id,p.name,e.target.value)} className="min-h-11 w-full rounded-lg border border-surface-border bg-surface-card px-3 py-2 text-base sm:text-sm text-white focus:border-red-600 focus:outline-none">{p.name === "mode" ? <><option value="desktop">Desktop</option><option value="tablet">Tablet</option><option value="hp">HP</option></> : <><option value="false">Area layar</option><option value="true">Halaman penuh</option></>}</select> : <input
+                      {/* Parameters Table */}
+                      <div className="space-y-2">
+                        <div className="text-xs font-mono-code text-zinc-400 flex justify-between">
+                          <span>PARAMETERS</span>
+                          <span className="text-[10px] text-zinc-500">Auto-mapped into request</span>
+                        </div>
+
+                        <div className="border border-surface-border rounded overflow-x-auto">
+                          <table className="w-full table-fixed text-left text-xs font-mono-code">
+                            <thead className="bg-surface-card text-zinc-400 border-b border-surface-border text-[11px]">
+                              <tr>
+                                <th className="w-1/4 p-2.5">KEY</th>
+                                <th className="w-1/5 p-2.5">TYPE</th>
+                                <th className="p-2.5">VALUE</th>
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-surface-border bg-black/40">
+                              {ep.params?.some(p => p.name !== "apikey") ? (
+                                ep.params.filter(p => p.name !== "apikey").map((p) => (
+                                  <tr key={p.name}>
+                                    <td className="p-2.5 text-zinc-300">
+                                      {p.name}
+                                      {p.required && <span className="text-red-500 font-bold ml-1">*</span>}
+                                    </td>
+                                    <td className="p-2.5 text-zinc-500 text-[10px]">{p.type}</td>
+                                    <td className="p-2.5">
+                                      {isHd && p.name === "scale" ? <select aria-label="Skala HD" value={paramValues[`${ep.id}_${p.name}`] ?? "4"} onChange={e=>handleParamChange(ep.id,p.name,e.target.value)} className="w-full rounded border border-surface-border bg-surface-card px-2 py-2 text-xs text-white focus:border-red-600 focus:outline-none"><option value="2">2×</option><option value="4">4×</option></select> : isScreenshot && ["mode","fullPage"].includes(p.name) ? <select aria-label={p.name === "mode" ? "Perangkat screenshot" : "Halaman penuh"} value={paramValues[`${ep.id}_${p.name}`] ?? (p.name === "mode" ? "desktop" : "false")} onChange={e=>handleParamChange(ep.id,p.name,e.target.value)} className="w-full rounded border border-surface-border bg-surface-card px-2 py-2 text-xs text-white focus:border-red-600 focus:outline-none">{p.name === "mode" ? <><option value="desktop">Desktop</option><option value="tablet">Tablet</option><option value="hp">HP</option></> : <><option value="false">Area layar</option><option value="true">Halaman penuh</option></>}</select> : <input
                                         type="text"
                                         aria-label={p.name}
                                         value={paramValues[`${ep.id}_${p.name}`] ?? ""}
                                         onChange={(e) => handleParamChange(ep.id, p.name, e.target.value)}
-                                        className="min-h-11 w-full bg-surface-card border border-surface-border px-3 py-2 text-base sm:text-sm text-white rounded-lg focus:border-red-600 focus:outline-none"
+                                        className="w-full bg-surface-card border border-surface-border px-2.5 py-1 text-xs text-white rounded focus:border-red-600 focus:outline-none"
                                       />}
-                            </label>
-                          ))}
-                        </fieldset>
-                      )}
+                                    </td>
+                                  </tr>
+                                ))
+                              ) : (
+                                <tr>
+                                  <td colSpan={3} className="p-3 text-center text-zinc-500">
+                                    No parameters required.
+                                  </td>
+                                </tr>
+                              )}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
 
                       {/* Execution Action Button */}
                       <div className="flex flex-wrap gap-3 items-center justify-between pt-1">
                         <button
                           onClick={() => executeRequest(ep)}
                           disabled={isSubmitting || !canExecute || !(apiKeys[ep.id] ?? defaultKey ?? "").trim()}
-                          className="action-button rounded-lg min-h-11 px-4 sm:px-6 py-2.5 bg-red-600 hover:bg-red-500 disabled:opacity-50 text-white text-sm font-semibold transition-colors flex items-center gap-2"
+                          className="action-button rounded-lg px-4 sm:px-6 py-2.5 bg-red-600 hover:bg-red-500 disabled:opacity-50 text-black font-bebas text-xl tracking-wider uppercase transition-transform active:scale-95 flex items-center gap-2"
                         >
                           {isSubmitting ? (
                             <>
-                              <Loader2 className="w-4 h-4 animate-spin text-white" />
-                              Mengirim…
+                              <Loader2 className="w-4 h-4 animate-spin text-black" />
+                              CONNECTING NODE...
                             </>
                           ) : (
                             <>
-                              <Play className="w-4 h-4 fill-current text-white" />
-                              Kirim request
+                              <Play className="w-4 h-4 fill-black text-black" />
+                              EXECUTE REQUEST
                             </>
                           )}
                         </button>
@@ -360,12 +385,12 @@ export default function DocsAccordion({ defaultKey }: { defaultKey?: string }) {
                         )}
                       </div>
 
-                      {!canExecute && <p className="text-xs text-amber-300">Endpoint ini belum bisa diuji. Contoh kode tetap tersedia di bawah.</p>}
+                      {!canExecute && <p className="text-xs text-amber-300">Endpoint ini belum dapat diuji melalui playground.</p>}
 
                       {/* Response Box */}
                       <div className="space-y-1.5 pt-2">
                         <div className="flex flex-wrap gap-2 items-center justify-between text-xs font-mono-code text-zinc-400">
-                          <span>{isHd ? "Pratinjau hasil HD" : isScreenshot ? "Pratinjau screenshot" : "Respons"}</span>
+                          <span>{isHd ? "PREVIEW HD:" : isScreenshot ? "PREVIEW SCREENSHOT:" : "LIVE RESPONSE OUTPUT:"}</span>
                           {resData && !isSubmitting && !isImage && (
                             <button
                               onClick={() => copyResponse(ep.id, resData.body)}
@@ -374,24 +399,24 @@ export default function DocsAccordion({ defaultKey }: { defaultKey?: string }) {
                               {copiedId === ep.id ? (
                                 <>
                                   <Check className="w-3 h-3 text-emerald-400" />
-                                  Tersalin
+                                  COPIED
                                 </>
                               ) : (
                                 <>
                                   <Copy className="w-3 h-3" />
-                                  Salin JSON
+                                  COPY JSON
                                 </>
                               )}
                             </button>
                           )}
                         </div>
 
-                        <div aria-busy={isSubmitting} className={`bg-black/95 border border-surface-border rounded-lg p-3.5 font-mono-code text-xs text-zinc-300 min-h-20 ${isImage ? "" : "max-h-[300px] overflow-auto"}`}>
+                        <div aria-busy={isSubmitting} className={`bg-black/95 border border-surface-border rounded-lg p-3.5 font-mono-code text-xs text-zinc-300 min-h-[140px] ${isImage ? "" : "max-h-[300px] overflow-auto"}`}>
                           {isSubmitting ? <div role="status" aria-live="polite" className="space-y-4 py-3"><div className="flex items-center gap-3 text-red-400"><span className="h-5 w-5 animate-spin motion-reduce:animate-none rounded-full border-2 border-red-900 border-t-red-400" />Menjalankan endpoint, menunggu respons...</div><div aria-hidden="true" className="space-y-2 motion-safe:animate-pulse"><div className="h-2 w-4/5 rounded bg-zinc-800" /><div className="h-2 w-3/5 rounded bg-zinc-800" /><div className="h-2 w-2/5 rounded bg-zinc-800" /></div></div> : isHd ? <HdPreview response={resData?.body} apiKey={resData?.apiKey}/> : isScreenshot ? <ScreenshotPreview response={resData?.body}/> : <pre className="whitespace-pre-wrap break-words">
                             <code>
                               {resData
                                 ? JSON.stringify(resData.body, null, 2)
-                                : 'Respons akan muncul setelah request dikirim.'}
+                                : '// Klik "EXECUTE REQUEST" untuk mengirim request nyata ke node Pterodactyl...'}
                             </code>
                           </pre>}
                         </div>

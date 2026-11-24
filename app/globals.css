@@ -77,6 +77,19 @@ button:focus-visible, input:focus-visible, select:focus-visible, a:focus-visible
 }
 pre { max-inline-size: 100%; overflow-x: auto; overflow-wrap: normal; }
 
+.hero-panel {
+  background: radial-gradient(ellipse at 86% 12%, rgb(153 27 27 / 24%), transparent 60%),
+    linear-gradient(125deg, #191216, #0d0d12 66%);
+  box-shadow: 0 24px 60px -42px rgb(239 68 68 / 48%);
+}
+.hero-title {
+  font-size: clamp(2.4rem, 8.5vw, 5.7rem);
+  line-height: .98;
+  text-wrap: balance;
+}
+.hero-kicker { animation: appear .5s both; }
+.hero-panel h1 { animation: appear .55s .08s both; }
+.hero-panel p { animation: appear .55s .14s both; }
 .action-button, .interactive-card { transition: transform .2s ease, border-color .2s ease, box-shadow .2s ease; }
 @media (hover: hover) {
   .action-button:hover { transform: translateY(-2px); }
@@ -110,26 +123,4 @@ pre { max-inline-size: 100%; overflow-x: auto; overflow-wrap: normal; }
 .admin-navigation::backdrop {
   background: rgb(0 0 0 / 75%);
   backdrop-filter: blur(4px);
-}
-
-.portal-drawer[open] {
-  animation: portal-drawer-in 180ms ease-out;
-}
-@keyframes portal-drawer-in {
-  from { transform: translateX(100%); }
-  to { transform: translateX(0); }
-}
-@media (prefers-reduced-motion: reduce) {
-  .portal-drawer[open] { animation: none; }
-}
-
-.quota-progress::-webkit-progress-bar { background: #27272a; }
-.quota-progress::-webkit-progress-value { background: #ef4444; }
-.quota-progress::-moz-progress-bar { background: #ef4444; }
-
-.portal-hero {
-  background-color: #111116;
-  background-image:
-    radial-gradient(ellipse at 12% 6%, rgb(153 27 27 / 26%), transparent 60%),
-    repeating-linear-gradient(90deg, rgb(255 255 255 / 2%) 0 1px, transparent 1px 36px);
 }

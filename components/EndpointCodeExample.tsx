@@ -46,7 +46,7 @@ export default function EndpointCodeExample({
     >
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h3 className="text-xs font-mono-code font-bold tracking-wide text-zinc-200">
-          Contoh kode
+          CONTOH KODE
         </h3>
         <button
           type="button"

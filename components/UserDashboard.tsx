@@ -5,20 +5,14 @@ import { Profile, ApiKey } from "@/types";
 import { Eye, EyeOff, Copy, RefreshCw, Check } from "lucide-react";
 
 interface UserDashboardProps {
-  user: Profile;
+  user: Profile | null;
   apiKey: ApiKey | null;
   onRefresh: () => void;
   onKeyRotated: (key: ApiKey) => void;
   accessToken: string;
 }
 
-export default function UserDashboard({
-  user,
-  apiKey,
-  onRefresh,
-  onKeyRotated,
-  accessToken,
-}: UserDashboardProps) {
+export default function UserDashboard({ user, apiKey, onRefresh, onKeyRotated, accessToken }: UserDashboardProps) {
   const [showKey, setShowKey] = useState(false);
   const [copied, setCopied] = useState(false);
   const [regenerating, setRegenerating] = useState(false);
@@ -37,179 +31,167 @@ export default function UserDashboard({
   };
 
   const handleRegenerate = async () => {
-    if (!confirm("Buat API key baru? Key lama akan dinonaktifkan.")) return;
+    if (!user || !confirm("Buat API key baru? Key lama akan dinonaktifkan.")) return;
     setRegenerating(true);
     setFeedback("");
     try {
-      if (!accessToken)
-        throw new Error("Sesi sudah tidak valid. Silakan login kembali.");
+      if (!accessToken) throw new Error("Sesi sudah tidak valid. Silakan login kembali.");
       const response = await fetch("/api/user/api-key/rotate", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-          "Content-Type": "application/json",
-        },
-        body: "{}",
-        signal: AbortSignal.timeout(22000),
+        method: "POST", headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" },
+        body: "{}", signal: AbortSignal.timeout(22000),
       });
       const data = await response.json();
-      if (!response.ok)
-        throw new Error(data.error || "Gagal mengganti API key.");
-      if (
-        data.apiKey?.user_id !== user.id ||
-        typeof data.apiKey?.key !== "string" ||
-        data.apiKey.is_active !== true
-      )
-        throw new Error("Respons API key tidak valid.");
+      if (!response.ok) throw new Error(data.error || "Gagal mengganti API key.");
+      if (data.apiKey?.user_id !== user.id || typeof data.apiKey?.key !== "string" || data.apiKey.is_active !== true) throw new Error("Respons API key tidak valid.");
       onKeyRotated(data.apiKey);
       setShowKey(false);
       setFeedback("API key baru dibuat. Semua key lama sudah dinonaktifkan.");
     } catch (error) {
       onRefresh();
-      setFeedback(
-        error instanceof Error
-          ? error.message
-          : "Gagal mengganti API key. Silakan coba lagi.",
-      );
+      setFeedback(error instanceof Error ? error.message : "Gagal mengganti API key. Silakan coba lagi.");
     } finally {
       setRegenerating(false);
     }
   };
 
-  const total = Math.max(0, user.limit_daily);
-  const remaining = Math.max(0, user.limit_remaining);
+  const remaining = user ? user.limit_remaining : 14280;
+  const total = user ? user.limit_daily : 15000;
   const used = Math.max(0, total - remaining);
-  const format = new Intl.NumberFormat("id-ID");
-  const plan = user.plan.charAt(0).toUpperCase() + user.plan.slice(1);
-  const control =
-    "inline-flex min-h-11 items-center gap-2 rounded-lg border border-surface-border px-3 text-sm text-zinc-200 hover:bg-surface-card disabled:opacity-50";
+  const percentUsed = total > 0 ? Math.min(100, Math.round(used / total * 100)) : 0;
 
   return (
-    <div className="space-y-5">
-      <h1 className="font-bebas text-4xl leading-none text-white sm:text-5xl">
-        Profil & API key
-      </h1>
-      <div className="grid min-w-0 items-start gap-4 lg:grid-cols-[1fr_1.35fr]">
-        <section
-          aria-labelledby="profile-account"
-          className="min-w-0 space-y-5 rounded-xl border border-surface-border bg-surface-panel p-5"
-        >
-          <div className="flex items-start gap-3">
-            <div
-              aria-hidden="true"
-              className="grid h-11 w-11 shrink-0 place-items-center rounded-lg bg-red-950 text-sm font-semibold text-red-200"
-            >
-              {user.username.slice(0, 2).toUpperCase()}
+    <div className="space-y-8">
+      <div className="border-b border-surface-border pb-4">
+        <h2 className="font-bebas text-4xl tracking-wide text-white">PROFIL & API KEY</h2>
+        <p className="text-xs font-mono-code text-zinc-400">
+          Kelola API Key, pantau kuota request harian, dan informasi paket Anda.
+        </p>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+        {/* Profile Card */}
+        <div className="lg:col-span-5 min-w-0 bg-surface-panel border border-surface-border rounded-xl p-4 sm:p-6 space-y-6">
+          <div className="flex items-center gap-4">
+            <div className="w-14 h-14 shrink-0 bg-red-600 rounded flex items-center justify-center font-bebas text-3xl text-black font-bold">
+              {user ? user.username.substring(0, 2).toUpperCase() : "DU"}
             </div>
             <div className="min-w-0">
-              <h2
-                id="profile-account"
-                className="break-words font-semibold text-white"
-              >
-                {user.username}
-              </h2>
-              <p className="break-all text-sm text-zinc-400">{user.email}</p>
-              <p className="mt-1 text-xs text-zinc-300">
-                Paket {plan}
-                {user.banned ? " · Akun diblokir" : ""}
-              </p>
+              <h3 className="font-bebas text-2xl text-white leading-none">
+                {user ? user.username.toUpperCase() : "DEMO_USER"}
+              </h3>
+              <span className="text-xs font-mono-code text-zinc-400">
+                {user ? user.email : "user@redapi.dev"}
+              </span>
+              <div className="mt-1">
+                <span className="text-[10px] font-mono-code px-2 py-0.5 rounded bg-red-950 text-red-300 border border-red-800 uppercase font-bold">
+                  PLAN: {user ? user.plan.toUpperCase() : "VIP"} MEMBER
+                </span>
+              </div>
             </div>
           </div>
-          <div className="space-y-2 border-t border-surface-border pt-4">
-            <h3 className="text-sm font-semibold text-white">Kuota harian</h3>
-            <p className="font-mono-code text-2xl font-semibold tabular-nums text-white">
-              {format.format(remaining)}{" "}
-              <span className="text-sm font-normal text-zinc-400">
-                request tersisa
-              </span>
-            </p>
-            {total > 0 && (
-              <progress
-                aria-label="Kuota harian terpakai"
-                value={Math.min(total, used)}
-                max={total}
-                className="quota-progress block h-2 w-full overflow-hidden rounded-full"
-              />
-            )}
-            <p className="text-xs text-zinc-400">
-              {format.format(used)} terpakai dari {format.format(total)} request
-            </p>
-          </div>
-        </section>
 
-        <section
-          aria-labelledby="profile-key"
-          className="min-w-0 space-y-4 rounded-xl border border-surface-border bg-surface-panel p-5"
-        >
-          <div>
-            <h2 id="profile-key" className="text-lg font-semibold text-white">
-              API key Anda
-            </h2>
-            <p className="mt-1 text-sm leading-relaxed text-zinc-400">
-              Sertakan pada header{" "}
-              <code className="font-mono-code text-red-300">x-api-key</code> di
-              setiap request. Simpan key secara pribadi.
-            </p>
+          {/* Quota Gauge */}
+          <div className="space-y-2 border-t border-surface-border pt-4">
+            <div className="flex justify-between items-center text-xs font-mono-code">
+              <span className="text-zinc-400">DAILY QUOTA USAGE</span>
+              <span className="text-white font-bold">
+                {used.toLocaleString()} / {total.toLocaleString()} REQS
+              </span>
+            </div>
+            <div className="w-full bg-zinc-900 h-2.5 rounded overflow-hidden">
+              <div
+                className="bg-red-600 h-full transition-all duration-500"
+                style={{ width: `${percentUsed}%` }}
+              />
+            </div>
+            <span className="text-[10px] font-mono-code text-zinc-500">
+              Reset otomatis setiap pukul 00:00 WIB
+            </span>
           </div>
-          {apiKey ? (
+
+          {/* Account Details */}
+          <div className="space-y-2 border-t border-surface-border pt-4 text-xs font-mono-code text-zinc-400">
+            <div className="flex justify-between">
+              <span>Account ID:</span>
+              <span className="text-zinc-200">{user ? user.id.substring(0, 16) : "usr_demo9482fa810"}</span>
+            </div>
+            <div className="flex justify-between">
+              <span>Status:</span>
+              <span className="text-emerald-400">{user?.banned ? "Suspended" : "Active"}</span>
+            </div>
+            <div className="flex justify-between">
+              <span>Role:</span>
+              <span className="text-red-400 font-bold uppercase">{user ? user.role : "VIP"}</span>
+            </div>
+          </div>
+        </div>
+
+        {/* API Key Vault */}
+        <div className="lg:col-span-7 min-w-0 bg-surface-panel border border-surface-border rounded-xl p-4 sm:p-6 space-y-6">
+          <div className="flex flex-wrap gap-2 items-center justify-between border-b border-surface-border pb-3">
+            <h3 className="font-bebas text-2xl text-white">API KEY ANDA</h3>
+            <span className="text-xs font-mono-code text-emerald-400">{apiKey ? "ACTIVE" : "KEY BELUM TERSEDIA"}</span>
+          </div>
+
+          <p className="text-xs text-zinc-400 leading-relaxed">
+            Sertakan API Key ini pada setiap request API melalui header <code className="text-red-400">x-api-key: KEY</code>. Jangan bagikan key Anda ke publik.
+          </p>
+
+          <div className="space-y-2">
             <div className="flex flex-wrap items-center gap-2">
               <input
                 type={showKey ? "text" : "password"}
-                aria-label="API key"
-                value={keyString}
                 readOnly
-                className="min-h-11 w-full min-w-0 rounded-lg border border-surface-border bg-surface px-3 text-sm font-mono-code text-zinc-200 sm:flex-1"
+                value={keyString}
+                aria-label="API key"
+                placeholder="API key belum tersedia"
+                className="w-full min-w-0 sm:flex-1 bg-surface-card border border-surface-border px-3 py-2 text-xs font-mono-code text-red-300 rounded focus:outline-none"
               />
+
               <button
-                type="button"
                 onClick={() => setShowKey(!showKey)}
-                className={control}
+                disabled={!apiKey}
+                className="px-3 py-2 bg-surface-card border border-surface-border hover:border-zinc-400 text-xs font-mono-code text-zinc-300 rounded flex items-center gap-1"
               >
-                {showKey ? (
-                  <EyeOff className="h-4 w-4" aria-hidden="true" />
-                ) : (
-                  <Eye className="h-4 w-4" aria-hidden="true" />
-                )}
-                {showKey ? "Sembunyikan" : "Tampilkan"}
+                {showKey ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                {showKey ? "HIDE" : "SHOW"}
               </button>
-              <button type="button" onClick={handleCopy} className={control}>
-                {copied ? (
-                  <Check
-                    className="h-4 w-4 text-emerald-400"
-                    aria-hidden="true"
-                  />
-                ) : (
-                  <Copy className="h-4 w-4" aria-hidden="true" />
-                )}
-                {copied ? "Tersalin" : "Salin key"}
+
+              <button
+                onClick={handleCopy}
+                disabled={!apiKey}
+                className="px-3 py-2 bg-red-600 hover:bg-red-500 text-black font-bebas text-lg tracking-wider rounded uppercase flex items-center gap-1"
+              >
+                {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                {copied ? "COPIED" : "COPY"}
               </button>
             </div>
-          ) : (
-            <p className="text-sm text-zinc-300">Belum ada API key aktif.</p>
-          )}
-          <div className="space-y-2 border-t border-surface-border pt-4">
-            <button
-              type="button"
-              disabled={regenerating || user.banned}
-              onClick={handleRegenerate}
-              className={control}
-            >
-              <RefreshCw
-                className={`h-4 w-4 ${regenerating ? "motion-safe:animate-spin" : ""}`}
-                aria-hidden="true"
-              />
-              {regenerating ? "Membuat API key…" : "Buat API key baru"}
-            </button>
-            <p className="text-xs text-zinc-400">
-              Membuat key baru akan menonaktifkan key lama.
-            </p>
           </div>
-          {feedback && (
-            <p role="status" className="break-words text-sm text-zinc-300">
-              {feedback}
-            </p>
-          )}
-        </section>
+
+          <div className="pt-2 flex flex-wrap gap-2 items-center justify-between">
+            <button
+              onClick={handleRegenerate}
+              disabled={regenerating || user?.banned}
+              className="px-4 py-2 border border-red-800 text-red-400 hover:bg-red-950/40 text-xs font-mono-code rounded transition-colors flex items-center gap-1.5"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${regenerating ? "animate-spin" : ""}`} />
+              REGENERATE API KEY
+            </button>
+            <span className="text-[10px] font-mono-code text-zinc-500">
+              Key lama langsung dinonaktifkan
+            </span>
+          </div>
+
+          {feedback && <p role="status" className="text-xs text-zinc-300">{feedback}</p>}
+
+          {/* Quick Integration Instructions */}
+          <div className="bg-black/60 border border-surface-border rounded p-3 text-xs font-mono-code text-zinc-400 space-y-1">
+            <span className="text-red-400 font-bold">EXAMPLE USAGE:</span>
+            <div className="text-[11px] text-zinc-300 select-all break-all">
+              curl -H &quot;x-api-key: YOUR_KEY&quot; &quot;https://api.redapi.my.id/api/download/tiktok?url=https://vt.tiktok.com/ZS9ChQ9WD/&quot;
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );

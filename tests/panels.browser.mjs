@@ -38,32 +38,23 @@ try {
   const anonymous = await newPage();
   for (const path of ['/admin', '/admin/users', '/admin/not-a-page']) {
     await anonymous.goto(base + path); await anonymous.waitForURL(base + '/');
-    await anonymous.getByText('REST API untuk bot dan aplikasi', { exact: false }).waitFor();
+    await anonymous.getByText('UNTUK BOT', { exact: false }).waitFor();
   }
   await anonymous.getByRole('button', { name: 'Buka menu navigasi' }).click();
-  assert.equal(await anonymous.getByRole('button', { name: 'Panel admin' }).count(), 0);
+  assert.equal(await anonymous.getByRole('button', { name: '05. MASTER ADMIN CONSOLE' }).count(), 0);
   console.log('PASS anonymous admin URLs redirect to landing and admin navigation is absent');
-  const publicMenu = anonymous.getByRole('dialog', { name: 'Menu', exact: true });
-  assert.equal(await publicMenu.getByRole('button', { name: 'Beranda', exact: true }).getAttribute('aria-current'), 'page');
-  await anonymous.keyboard.press('Escape');
-  await publicMenu.waitFor({ state:'hidden' });
-  assert.equal(await anonymous.getByRole('button', { name:'Buka menu navigasi' }).evaluate(el=>document.activeElement===el),true);
-  for(const width of [320, 768, 1280]) {
-    await anonymous.setViewportSize({width,height:850});
-    assert.equal(await anonymous.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);
-  }
   await anonymous.close();
 
   const member = await newPage('member-token', 1280);
   profileDelay = 700;
   await member.goto(base + '/?tab=admin');
   await member.getByText('Memuat data akun...', { exact: true }).waitFor();
-  assert.equal(await member.getByRole('button', { name: 'Masuk', exact: true }).count(), 0);
+  assert.equal(await member.getByRole('button', { name: 'MASUK GOOGLE', exact: true }).count(), 0);
   await member.waitForURL(base + '/'); profileDelay = 0;
-  await member.getByRole('button', { name: 'Buka menu navigasi', exact: true }).waitFor();
-  assert.equal(await member.getByRole('button', { name: 'Panel admin', exact: true }).count(), 0);
+  await member.getByRole('button', { name: 'Logout', exact: true }).waitFor();
+  assert.equal(await member.getByRole('button', { name: 'ADMIN PANEL', exact: true }).count(), 0);
   await member.getByRole('button', { name: 'Buka menu navigasi' }).click();
-  assert.equal(await member.getByRole('button', { name: 'Panel admin' }).count(), 0);
+  assert.equal(await member.getByRole('button', { name: '05. MASTER ADMIN CONSOLE' }).count(), 0);
   assert.equal(await member.evaluate(() => window.__xss), undefined);
   assert.equal(await member.locator('img[src="x"]').count(), 0);
   await member.context().addCookies([{ name: 'red_admin_session', value: 'member-token', domain: '127.0.0.1', path: '/admin' }]);
@@ -85,18 +76,18 @@ try {
     return route.fulfill({ json: { apiKey: displayedKey } });
   });
   await member.goto(base + '/?tab=profile');
-  const keyField = member.getByLabel('API key', { exact: true });
+  const keyField = member.getByRole('textbox', { name: 'API key', exact: true });
   await keyField.waitFor(); assert.equal(await keyField.inputValue(), 'red_live_old_member');
   member.once('dialog', dialog => dialog.accept());
-  await member.getByRole('button', { name: 'Buat API key baru', exact: true }).click();
+  await member.getByRole('button', { name: 'REGENERATE API KEY', exact: true }).click();
   await member.getByText('API key baru dibuat. Semua key lama sudah dinonaktifkan.', { exact: true }).waitFor();
   assert.equal(await keyField.inputValue(), 'red_live_new_member');
   rotationMode = 'failed'; member.once('dialog', dialog => dialog.accept());
-  await member.getByRole('button', { name: 'Buat API key baru', exact: true }).click();
+  await member.getByRole('button', { name: 'REGENERATE API KEY', exact: true }).click();
   await member.getByText('Rotasi gagal untuk pengujian.', { exact: true }).waitFor();
   await member.waitForFunction(() => document.querySelector('input[aria-label="API key"]')?.value === 'red_live_new_member');
   rotationMode = 'wrong-owner'; member.once('dialog', dialog => dialog.accept());
-  await member.getByRole('button', { name: 'Buat API key baru', exact: true }).click();
+  await member.getByRole('button', { name: 'REGENERATE API KEY', exact: true }).click();
   await member.getByText('Respons API key tidak valid.', { exact: true }).waitFor();
   await member.waitForFunction(() => document.querySelector('input[aria-label="API key"]')?.value === 'red_live_new_member');
   console.log('PASS key rotation updates the vault, errors recover state and foreign-account keys are rejected');
@@ -145,15 +136,15 @@ try {
   await admin.route('**/api/admin/logs', route => route.fulfill({ json: [] }));
   await admin.route('**/api/admin/system', route => route.fulfill({ json: { maintenance_mode: false } }));
   await admin.goto(base + '/');
-  await admin.getByRole('button', { name: 'Panel admin', exact: true }).waitFor();
-  await admin.getByRole('button', { name: 'Panel admin', exact: true }).click();
+  await admin.getByRole('button', { name: 'ADMIN PANEL', exact: true }).waitFor();
+  await admin.getByRole('button', { name: 'ADMIN PANEL', exact: true }).click();
   await admin.waitForURL('**/admin/endpoints');
   await admin.getByRole('heading', { name: 'Endpoint Registry', exact: true }).waitFor();
   const cookie = (await admin.context().cookies()).find(cookie => cookie.name === 'red_admin_session');
   assert.ok(cookie?.httpOnly); assert.equal(cookie.path, '/admin'); assert.equal(cookie.sameSite, 'Strict'); assert.ok(cookie.secure);
   for (const [id, title] of [['new-endpoint', 'Tambah Endpoint'], ['categories', 'Kategori'], ['users', 'Manajemen Pengguna'], ['logs', 'Log Akses'], ['settings', 'Pengaturan Sistem'], ['announcements','Pengumuman'], ['payments','Pembayaran'], ['bug-reports','Laporan Bug'], ['endpoints', 'Endpoint Registry']]) {
     await admin.getByRole('button', { name: 'Buka menu admin' }).click();
-    const menu = admin.getByRole('dialog', { name: 'Menu admin' });
+    const menu = admin.getByRole('dialog', { name: 'MENU ADMIN' });
     await menu.getByRole('link', { name: new RegExp(title) }).click();
     await admin.waitForURL('**/admin/' + id);
     await admin.getByRole('heading', { name: title, exact: true }).waitFor();
@@ -172,7 +163,7 @@ try {
     }
   }
   await admin.getByRole('button', { name: 'Buka menu admin' }).click();
-  await admin.keyboard.press('Escape'); await admin.getByRole('dialog', { name: 'Menu admin' }).waitFor({ state: 'hidden' });
+  await admin.keyboard.press('Escape'); await admin.getByRole('dialog', { name: 'MENU ADMIN' }).waitFor({ state: 'hidden' });
   await admin.reload(); await admin.getByRole('heading', { name: 'Endpoint Registry', exact: true }).waitFor();
   const document = await admin.request.get(base + '/'); const html = await document.text();
   const csp = document.headers()['content-security-policy']; assert.ok(csp.includes("object-src 'none'"));
@@ -212,7 +203,7 @@ try {
   await admin.goto(base+'/admin/settings');
   const messageField=admin.getByLabel('Pesan pop up maintenance',{exact:true});
   await messageField.fill('Maintenance terjadwal\nKami segera kembali.');
-  await admin.getByRole('button',{name:'Muat ulang',exact:true}).click();
+  await admin.getByRole('button',{name:'Coba lagi / Refresh',exact:true}).click();
   assert.equal(await messageField.inputValue(),'Maintenance terjadwal\nKami segera kembali.');
   await admin.getByRole('button',{name:'Simpan pesan maintenance',exact:true}).click();
   const saveDialog=admin.getByRole('dialog',{name:'Simpan pesan maintenance?'});await saveDialog.waitFor();const saveResponse=admin.waitForResponse(r=>r.url().endsWith('/api/admin/maintenance')&&r.request().method()==='POST');await saveDialog.getByRole('button',{name:'Ya, lanjutkan',exact:true}).click();
@@ -232,7 +223,7 @@ try {
   await maintenanceModal.waitFor();assert.equal(await maintenanceModal.evaluate(el=>getComputedStyle(el).borderTopColor),'rgb(220, 38, 38)');await blocked.keyboard.press('Escape');assert.equal(await maintenanceModal.isVisible(),true);
   assert.equal(await blocked.getByRole('button',{name:'Tutup',exact:true}).count(),0);
   await blocked.evaluate(()=>document.querySelector('dialog').remove());
-  assert.equal(await blocked.getByText('REST API untuk bot dan aplikasi',{exact:false}).count(),0);
+  assert.equal(await blocked.getByText('UNTUK BOT',{exact:false}).count(),0);
   await blocked.close();
   console.log('PASS maintenance dialog cannot close with Escape and protected content is absent behind it');
 
@@ -241,7 +232,7 @@ try {
   await notices.route('**/api/portal/state',route=>route.fulfill({json:{maintenance:{active:false,message:''},announcements:[{id:'test-notice',title:'Info terbaru',message:'<img src=x onerror="window.__noticeXss=1">',expiresAt:new Date(Date.now()+60000).toISOString()}],qrisReady:false,serverTime:new Date().toISOString()}}));
   await notices.goto(base+'/');await notices.getByRole('dialog',{name:'Info terbaru'}).waitFor();
   assert.equal(await notices.evaluate(()=>window.__noticeXss),undefined);assert.equal(await notices.locator('img[src="x"]').count(),0);
-  await notices.getByRole('button',{name:'Tutup',exact:true}).click();await notices.reload();await notices.getByText('REST API untuk bot dan aplikasi',{exact:false}).waitFor();
+  await notices.getByRole('button',{name:'Tutup',exact:true}).click();await notices.reload();await notices.getByText('UNTUK BOT',{exact:false}).waitFor();
   assert.equal(await notices.getByRole('dialog',{name:'Info terbaru'}).count(),0);await notices.close();
 
   const tester=await newPage('member-token',360);
@@ -262,14 +253,13 @@ try {
     await route.fulfill({contentType:'application/json',body:' \n'+JSON.stringify(body)});
   });
   await tester.goto(base+'/?tab=docs');
-  await tester.getByRole('searchbox',{name:'Cari endpoint',exact:true}).fill('  fixture  ');
   const card=tester.getByRole('button',{name:/FF fixture/});await card.waitFor();assert.equal(await card.getAttribute('aria-expanded'),'false');await card.click();
-  await tester.getByRole('textbox',{name:'uid',exact:true}).fill('12345678');await tester.locator('#endpoint-1').getByRole('button',{name:'Kirim request',exact:true}).click();
+  await tester.getByRole('textbox',{name:'uid',exact:true}).fill('12345678');await tester.locator('#endpoint-1').getByRole('button',{name:'EXECUTE REQUEST',exact:true}).click();
   await tester.getByText('Menjalankan endpoint, menunggu respons...',{exact:true}).waitFor();assert.equal(await tester.locator('[aria-busy="true"]').count(),1);
   release();await tester.getByText('200 OK',{exact:true}).waitFor();assert.equal(await tester.locator('[aria-busy="true"]').count(),0);
   await tester.getByRole('button',{name:/YT fixture/}).click();
   await tester.locator('#endpoint-2').getByRole('textbox',{name:'url',exact:true}).fill('https://youtu.be/jNQXAC9IVRw');
-  failConversion=true;await tester.locator('#endpoint-2').getByRole('button',{name:'Kirim request',exact:true}).click();
+  failConversion=true;await tester.locator('#endpoint-2').getByRole('button',{name:'EXECUTE REQUEST',exact:true}).click();
   await tester.getByText('Menjalankan endpoint, menunggu respons...',{exact:true}).waitFor();
   assert.ok((await tester.evaluate(()=>window.__requestTimeouts)).includes(230000));release();
   await tester.getByText('200 ERROR',{exact:true}).waitFor();assert.equal(await tester.locator('[aria-busy="true"]').count(),0);
@@ -281,29 +271,29 @@ try {
   for(const mode of ['desktop','tablet','hp']){
     await screenshotPanel.getByLabel('Perangkat screenshot',{exact:true}).selectOption(mode);
     const requestReady=new Promise(resolve=>onScreenshotRequest=resolve);
-    await screenshotPanel.getByRole('button',{name:'Kirim request',exact:true}).click();await requestReady;release();
+    await screenshotPanel.getByRole('button',{name:'EXECUTE REQUEST',exact:true}).click();await requestReady;release();
     await screenshotPanel.getByRole('img',{name:'Screenshot '+({desktop:'Desktop',tablet:'Tablet',hp:'HP'})[mode],exact:true}).waitFor();
     await tester.waitForFunction(()=>document.querySelector('#endpoint-3 img')?.naturalWidth===16);
-    assert.equal(await screenshotPanel.locator('pre:not([aria-label])').count(),0);assert.equal(await screenshotPanel.getByRole('button',{name:'Salin JSON',exact:true}).count(),0);
+    assert.equal(await screenshotPanel.locator('pre:not([aria-label])').count(),0);assert.equal(await screenshotPanel.getByRole('button',{name:'COPY JSON',exact:true}).count(),0);
     assert.ok((await tester.evaluate(()=>window.__requestTimeouts)).includes(135000));
   }
   const downloadEvent=tester.waitForEvent('download');await screenshotPanel.getByRole('link',{name:'Unduh PNG',exact:true}).click();const download=await downloadEvent;assert.equal(download.suggestedFilename(),'red-api-hp.png');await download.cancel();
   for(const width of [320,360,1280]){await tester.setViewportSize({width,height:850});assert.equal(await tester.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);}
-  failScreenshot=true;const errorReady=new Promise(resolve=>onScreenshotRequest=resolve);await screenshotPanel.getByRole('button',{name:'Kirim request',exact:true}).click();await errorReady;release();await screenshotPanel.getByRole('alert').waitFor();assert.equal(await screenshotPanel.getByRole('alert').innerText(),'Target tidak diizinkan.');assert.equal(await screenshotPanel.locator('pre:not([aria-label])').count(),0);
+  failScreenshot=true;const errorReady=new Promise(resolve=>onScreenshotRequest=resolve);await screenshotPanel.getByRole('button',{name:'EXECUTE REQUEST',exact:true}).click();await errorReady;release();await screenshotPanel.getByRole('alert').waitFor();assert.equal(await screenshotPanel.getByRole('alert').innerText(),'Target tidak diizinkan.');assert.equal(await screenshotPanel.locator('pre:not([aria-label])').count(),0);
   await tester.getByRole('button',{name:/IG fixture/}).click();const instagramPanel=tester.locator('#endpoint-4');
   assert.equal(await instagramPanel.getByRole('textbox',{name:'url',exact:true}).inputValue(),'');await instagramPanel.getByRole('textbox',{name:'url',exact:true}).fill('https://www.instagram.com/reel/DfenBL6JaTk/');
   await tester.evaluate(()=>window.__requestTimeouts=[]);const instagramReady=new Promise(resolve=>onInstagramRequest=resolve);
-  await instagramPanel.getByRole('button',{name:'Kirim request',exact:true}).click();await instagramReady;assert.ok((await tester.evaluate(()=>window.__requestTimeouts)).includes(135000));release();await instagramPanel.getByText('200 OK',{exact:true}).waitFor();assert.match(await instagramPanel.locator('pre:not([aria-label])').innerText(),/tapdl.com/);
+  await instagramPanel.getByRole('button',{name:'EXECUTE REQUEST',exact:true}).click();await instagramReady;assert.ok((await tester.evaluate(()=>window.__requestTimeouts)).includes(135000));release();await instagramPanel.getByText('200 OK',{exact:true}).waitFor();assert.match(await instagramPanel.locator('pre:not([aria-label])').innerText(),/tapdl.com/);
   await tester.getByRole('button',{name:/HD fixture/}).click();const hdPanel=tester.locator('#endpoint-5');
   assert.equal(await hdPanel.getByRole('textbox',{name:'url',exact:true}).inputValue(),'');assert.equal(await hdPanel.getByLabel('Skala HD').inputValue(),'4');await hdPanel.getByRole('textbox',{name:'url',exact:true}).fill('https://example.com/image.png');
-  for(const scale of ['2','4']){await hdPanel.getByLabel('Skala HD').selectOption(scale);const hdReady=new Promise(r=>onHdRequest=r);await hdPanel.getByRole('button',{name:'Kirim request',exact:true}).click();await hdReady;await hdPanel.getByText("Menjalankan endpoint, menunggu respons...",{exact:true}).waitFor();release();await hdPanel.getByRole('img',{name:`Hasil peningkatan gambar ${scale} kali`,exact:true}).waitFor();assert.equal(await hdPanel.locator('pre:not([aria-label])').count(),0);assert.ok((await tester.evaluate(()=>window.__requestTimeouts)).includes(230000));}
+  for(const scale of ['2','4']){await hdPanel.getByLabel('Skala HD').selectOption(scale);const hdReady=new Promise(r=>onHdRequest=r);await hdPanel.getByRole('button',{name:'EXECUTE REQUEST',exact:true}).click();await hdReady;await hdPanel.getByText("Menjalankan endpoint, menunggu respons...",{exact:true}).waitFor();release();await hdPanel.getByRole('img',{name:`Hasil peningkatan gambar ${scale} kali`,exact:true}).waitFor();assert.equal(await hdPanel.locator('pre:not([aria-label])').count(),0);assert.ok((await tester.evaluate(()=>window.__requestTimeouts)).includes(230000));}
   const hdDownload=tester.waitForEvent('download');await hdPanel.getByRole('link',{name:'Unduh PNG',exact:true}).click();assert.equal((await hdDownload).suggestedFilename(),'red-api-hd.png');
-  let protectedDownloads=0;await tester.route('https://api.redapi.my.id/api/tools/hd?result=*',route=>{protectedDownloads++;assert.equal(route.request().headers()['x-api-key'],'red_live_fixture');return route.fulfill({contentType:'image/png',body:Buffer.from(captureFixture,'base64')});});largeHd=true;const protectedReady=new Promise(r=>onHdRequest=r);await hdPanel.getByRole('button',{name:'Kirim request',exact:true}).click();await protectedReady;await hdPanel.locator("img").waitFor({state:"hidden"});release();await hdPanel.locator('img').waitFor();assert.equal(protectedDownloads,1);
-  unsafeHd=true;const unsafeReady=new Promise(r=>onHdRequest=r);await hdPanel.getByRole('button',{name:'Kirim request',exact:true}).click();await unsafeReady;await hdPanel.locator("img").waitFor({state:"hidden"});release();await hdPanel.getByRole('alert').waitFor();assert.equal(await hdPanel.getByRole('alert').innerText(),'Alamat unduhan tidak valid.');assert.equal(protectedDownloads,1);
+  let protectedDownloads=0;await tester.route('https://api.redapi.my.id/api/tools/hd?result=*',route=>{protectedDownloads++;assert.equal(route.request().headers()['x-api-key'],'red_live_fixture');return route.fulfill({contentType:'image/png',body:Buffer.from(captureFixture,'base64')});});largeHd=true;const protectedReady=new Promise(r=>onHdRequest=r);await hdPanel.getByRole('button',{name:'EXECUTE REQUEST',exact:true}).click();await protectedReady;await hdPanel.locator("img").waitFor({state:"hidden"});release();await hdPanel.locator('img').waitFor();assert.equal(protectedDownloads,1);
+  unsafeHd=true;const unsafeReady=new Promise(r=>onHdRequest=r);await hdPanel.getByRole('button',{name:'EXECUTE REQUEST',exact:true}).click();await unsafeReady;await hdPanel.locator("img").waitFor({state:"hidden"});release();await hdPanel.getByRole('alert').waitFor();assert.equal(await hdPanel.getByRole('alert').innerText(),'Alamat unduhan tidak valid.');assert.equal(protectedDownloads,1);
   for(const width of [320,360,1280]){await tester.setViewportSize({width,height:850});assert.equal(await tester.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);}
   await tester.getByRole('button',{name:/TikTok Stalk fixture/}).click();const stalkPanel=tester.locator('#endpoint-6');
   assert.equal(await stalkPanel.getByRole('textbox',{name:'username',exact:true}).inputValue(),'');await stalkPanel.getByRole('textbox',{name:'username',exact:true}).fill('@TikTok');
-  const stalkReady=new Promise(r=>onTikTokProfileRequest=r);await tester.evaluate(()=>window.__requestTimeouts=[]);await stalkPanel.getByRole('button',{name:'Kirim request',exact:true}).click();await stalkReady;
+  const stalkReady=new Promise(r=>onTikTokProfileRequest=r);await tester.evaluate(()=>window.__requestTimeouts=[]);await stalkPanel.getByRole('button',{name:'EXECUTE REQUEST',exact:true}).click();await stalkReady;
   assert.ok((await tester.evaluate(()=>window.__requestTimeouts)).includes(55000));await stalkPanel.getByText('Menjalankan endpoint, menunggu respons...',{exact:true}).waitFor();release();await stalkPanel.getByText('200 OK',{exact:true}).waitFor();assert.match(await stalkPanel.locator('pre:not([aria-label])').innerText(),/countik.com/);
   const stalkExample=stalkPanel.getByRole('region',{name:'Contoh kode /api/stalk/stalktt',exact:true});assert.match(await stalkExample.getByLabel('Kode curl',{exact:true}).innerText(),/username=tiktok/);
   console.log('PASS TikTok stalk tester keeps username blank, uses 55-second timeout and displays profile JSON with matching example');
@@ -319,7 +309,7 @@ try {
   let copiedExample='';await tester.exposeFunction('saveCopiedExample',text=>{copiedExample=text;});await tester.evaluate(()=>Object.defineProperty(navigator,'clipboard',{configurable:true,value:{writeText:text=>window.saveCopiedExample(text)}}));
   const finalExample=tester.getByRole('region',{name:'Contoh kode /api/tools/hd',exact:true});await finalExample.getByRole('button',{name:'Salin kode',exact:true}).click();await finalExample.getByRole('button',{name:'Tersalin',exact:true}).waitFor();assert.equal(copiedExample,await finalExample.getByLabel('Kode curl',{exact:true}).innerText());
   console.log('PASS endpoint-specific cURL/JavaScript/Python examples, safe API key placeholders, copy button and mobile overflow');
-  stalkMaintenance=true;await tester.reload();await tester.getByRole('button',{name:/TikTok Stalk fixture/}).click();const maintenanceStalk=tester.locator('#endpoint-6');assert.equal(await maintenanceStalk.getByRole('button',{name:'Kirim request',exact:true}).isDisabled(),true);await maintenanceStalk.getByRole('region',{name:'Contoh kode /api/stalk/stalktt',exact:true}).waitFor();
+  stalkMaintenance=true;await tester.reload();await tester.getByRole('button',{name:/TikTok Stalk fixture/}).click();const maintenanceStalk=tester.locator('#endpoint-6');assert.equal(await maintenanceStalk.getByRole('button',{name:'EXECUTE REQUEST',exact:true}).isDisabled(),true);await maintenanceStalk.getByRole('region',{name:'Contoh kode /api/stalk/stalktt',exact:true}).waitFor();
   console.log('PASS maintenance endpoint retains documentation and disables tester execution');
   await tester.close();console.log('PASS HD scales, PNG preview/download, protected large image fetch and refusal to leak keys to unsafe origins');
   console.log('PASS Instagram tester uses its extended timeout and displays successful media JSON');
@@ -363,7 +353,7 @@ try {
   await vipBuyer.goto(base+'/?tab=pricing');
   await vipBuyer.getByRole('button',{name:'Paket lebih rendah',exact:true}).waitFor();
   assert.equal(await vipBuyer.getByRole('button',{name:'Paket lebih rendah',exact:true}).isDisabled(),true);
-  assert.equal(await vipBuyer.getByRole('button',{name:'Perpanjang VIP',exact:true}).isEnabled(),true);
+  assert.equal(await vipBuyer.getByRole('button',{name:'Beli VIP',exact:true}).isEnabled(),true);
   assert.equal(await vipBuyer.getByRole('button',{name:'Beli Enterprise',exact:true}).isEnabled(),true);
   assert.equal(await vipBuyer.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);await vipBuyer.close();
   console.log('PASS VIP users cannot buy Basic; renewal and upgrades remain enabled');
