@@ -34,7 +34,7 @@ export default function Navbar({
           className="flex shrink-0 items-center gap-2 text-left"
         >
           <BrandIcon decorative className="h-9 w-9" />
-          <span className="text-lg font-bold tracking-tight text-white">
+          <span className="font-bebas text-2xl leading-none text-white">
             RED <span className="text-red-400">API</span>
           </span>
         </button>
@@ -48,7 +48,7 @@ export default function Navbar({
               type="button"
               onClick={() => setActiveTab(id)}
               aria-current={activeTab === id ? "page" : undefined}
-              className={`rounded-lg px-3 py-2 text-sm ${activeTab === id ? "bg-surface-card font-semibold text-white" : "text-zinc-400 hover:bg-surface-card hover:text-white"}`}
+              className={`rounded-lg border border-transparent px-3 py-2 font-mono-code text-xs ${activeTab === id ? "border-red-900/70 bg-red-950/40 text-red-100" : "text-zinc-400 hover:bg-surface-card hover:text-white"}`}
             >
               {label}
             </button>

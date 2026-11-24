@@ -293,7 +293,7 @@ export default function AdminConsole({ section }: { section: AdminSection }) {
       <header className="flex items-start gap-3 border-b border-surface-border pb-5 sm:gap-4">
         <AdminNavigation section={section} />
         <div className="min-w-0 space-y-1">
-          <h1 className="text-2xl font-semibold tracking-tight text-white sm:text-3xl">
+          <h1 className="font-bebas text-4xl leading-none text-white sm:text-5xl">
             {current.title}
           </h1>
           <p className="text-xs leading-relaxed text-zinc-400">

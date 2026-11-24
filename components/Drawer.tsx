@@ -51,7 +51,7 @@ export default function Drawer({
   }
 
   const rowClass = (id: string) =>
-    `flex min-h-11 w-full items-center justify-between gap-3 rounded-lg px-3 py-2 text-left text-sm ${activeTab === id ? "bg-surface-card font-semibold text-white" : "text-zinc-300 hover:bg-surface-card hover:text-white"}`;
+    `flex min-h-11 w-full items-center justify-between gap-3 rounded-lg px-3 py-2 text-left text-sm ${activeTab === id ? "bg-red-950/50 font-semibold text-red-100" : "text-zinc-300 hover:bg-surface-card hover:text-white"}`;
   return (
     <dialog
       ref={dialog}
@@ -68,7 +68,7 @@ export default function Drawer({
     >
       <div className="flex h-full flex-col">
         <header className="flex shrink-0 items-center justify-between gap-4 border-b border-surface-border p-4">
-          <h2 id="portal-navigation-title" className="text-lg font-semibold">
+          <h2 id="portal-navigation-title" className="font-bebas text-3xl leading-none">
             Menu
           </h2>
           <button

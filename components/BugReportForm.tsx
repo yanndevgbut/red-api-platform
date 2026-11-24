@@ -37,7 +37,7 @@ export default function BugReportForm() {
   return (
     <section className="mx-auto max-w-2xl space-y-5 rounded-xl border border-surface-border bg-surface-panel p-5 sm:p-8">
       <div>
-        <h1 className="text-3xl font-semibold tracking-tight text-white">Laporkan Bug</h1>
+        <h1 className="font-bebas text-4xl leading-none text-white sm:text-5xl">Laporkan Bug</h1>
         <p className="mt-1 text-sm text-zinc-400">
           Ceritakan masalah yang Anda alami di RED API.
         </p>

@@ -43,7 +43,7 @@ export default function TelemetryWidget() {
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h2
           id="server-status-heading"
-          className="text-base font-semibold text-white"
+          className="font-bebas text-2xl leading-none text-white"
         >
           Status layanan
         </h2>

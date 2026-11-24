@@ -81,7 +81,7 @@ export default function AuthModal({ isOpen, onClose, reason }: AuthModalProps) {
           <BrandIcon decorative className="mb-3 h-10 w-10" />
           <h2
             id="login-title"
-            className="text-2xl font-semibold tracking-tight text-white"
+            className="font-bebas text-4xl leading-none text-white"
           >
             Masuk ke RED API
           </h2>

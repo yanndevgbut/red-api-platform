@@ -47,7 +47,7 @@ export default function AdminNavigation({ section }: { section: AdminSection }) 
         <div className="flex h-full flex-col">
           <div className="flex items-center justify-between gap-4 border-b border-surface-border p-5">
             <div>
-              <h2 id="admin-menu-title" className="text-xl font-semibold">Menu admin</h2>
+              <h2 id="admin-menu-title" className="font-bebas text-3xl leading-none">Menu admin</h2>
             </div>
             <button autoFocus type="button" onClick={closeMenu} aria-label="Tutup menu admin" className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-surface-border hover:border-red-500">
               <X className="h-5 w-5" />

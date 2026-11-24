@@ -160,7 +160,7 @@ export default function DocsAccordion({ defaultKey }: { defaultKey?: string }) {
       {/* Search & Category Filter */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-surface-border pb-4">
         <div>
-          <h1 className="text-3xl font-semibold tracking-tight text-white">Dokumentasi API</h1>
+          <h1 className="font-bebas text-4xl leading-none text-white sm:text-5xl">Dokumentasi API</h1>
           <p className="text-xs font-mono-code text-zinc-400">
             Buka endpoint untuk mencoba request atau menyalin contoh kode.
           </p>
@@ -188,7 +188,7 @@ export default function DocsAccordion({ defaultKey }: { defaultKey?: string }) {
             aria-pressed={selectedCat === cat}
             className={`shrink-0 snap-start whitespace-nowrap px-3 py-2 rounded text-xs font-mono-code transition-all ${
               selectedCat === cat
-                ? "bg-red-600 text-black font-bold shadow-[0_0_12px_rgba(220,38,38,0.4)]"
+                ? "border border-red-700 bg-red-950/70 font-semibold text-red-100"
                 : "bg-surface-card text-zinc-400 border border-surface-border hover:border-zinc-500"
             }`}
           >

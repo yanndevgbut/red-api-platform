@@ -240,9 +240,11 @@ export default function Platform({ initialTab = "landing", adminSection }: { ini
         {/* VIEW 1: LANDING / OVERVIEW (Public) */}
         {activeTab === "landing" && (
           <>
-            <section className="grid min-w-0 items-center gap-7 rounded-2xl border border-surface-border bg-surface-panel p-5 sm:p-8 lg:grid-cols-[1.2fr_1fr] lg:gap-10 lg:p-10">
+            <section className="grid min-w-0 items-center gap-7 rounded-2xl border border-red-950 portal-hero p-5 sm:p-8 lg:grid-cols-[1.2fr_1fr] lg:gap-10 lg:p-10">
               <div className="min-w-0 space-y-5">
-                <h1 className="max-w-xl text-[clamp(2rem,5vw,3.5rem)] font-semibold leading-[1.1] tracking-tight text-white">REST API untuk bot dan aplikasi</h1>
+                <h1 className="max-w-xl text-balance font-bebas text-[clamp(2.75rem,6.5vw,5.25rem)] leading-[0.98] tracking-[0.02em] text-white">
+                  REST API untuk <span className="text-red-400">bot dan aplikasi</span>
+                </h1>
                 <p className="max-w-lg text-sm leading-relaxed text-zinc-300 sm:text-base">
                   Unduh media dari tautan publik, ambil screenshot, atau perbesar gambar. Coba endpoint di browser sebelum memasangnya di aplikasi.
                 </p>
@@ -269,9 +271,9 @@ export default function Platform({ initialTab = "landing", adminSection }: { ini
                 <div className="w-12 h-12 bg-red-950/80 border border-red-800 rounded-full flex items-center justify-center mx-auto text-red-500">
                   <Lock className="w-6 h-6" />
                 </div>
-                <h3 className="text-2xl font-semibold tracking-tight text-white">
+                <h1 className="font-bebas text-3xl leading-none text-white sm:text-4xl">
                   Masuk untuk mencoba endpoint
-                </h3>
+                </h1>
                 <p className="max-w-md mx-auto text-sm leading-relaxed text-zinc-400">
                   Untuk menguji endpoint dan mendapatkan API Key produksi, silakan login menggunakan akun Google Anda terlebih dahulu.
                 </p>
@@ -307,9 +309,9 @@ export default function Platform({ initialTab = "landing", adminSection }: { ini
                 <div className="w-12 h-12 bg-red-950/80 border border-red-800 rounded-full flex items-center justify-center mx-auto text-red-500">
                   <Lock className="w-6 h-6" />
                 </div>
-                <h3 className="text-2xl font-semibold tracking-tight text-white">
+                <h1 className="font-bebas text-3xl leading-none text-white sm:text-4xl">
                   Masuk untuk melihat profil Anda
-                </h3>
+                </h1>
                 <p className="max-w-md mx-auto text-sm leading-relaxed text-zinc-400">
                   Login akun Google untuk melihat profil, kuota harian, serta kunci API produksi milik Anda.
                 </p>

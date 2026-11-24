@@ -37,7 +37,7 @@ print(res.json())`,
   return (
     <div className="min-w-0 overflow-hidden rounded-xl border border-surface-border bg-surface">
       <div className="bg-surface-card px-4 py-2.5 border-b border-surface-border flex flex-wrap gap-2 items-center justify-between">
-        <h2 className="text-sm font-semibold text-white">Contoh request</h2>
+        <h2 className="font-bebas text-2xl leading-none text-white">Contoh request</h2>
         <div className="flex gap-1 text-[11px] font-mono-code">
           {(["curl", "node", "python"] as const).map((t) => (
             <button

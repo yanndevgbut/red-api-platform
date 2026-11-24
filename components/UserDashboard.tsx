@@ -86,7 +86,7 @@ export default function UserDashboard({
 
   return (
     <div className="space-y-5">
-      <h1 className="text-3xl font-semibold tracking-tight text-white">
+      <h1 className="font-bebas text-4xl leading-none text-white sm:text-5xl">
         Profil & API key
       </h1>
       <div className="grid min-w-0 items-start gap-4 lg:grid-cols-[1fr_1.35fr]">
@@ -117,7 +117,7 @@ export default function UserDashboard({
           </div>
           <div className="space-y-2 border-t border-surface-border pt-4">
             <h3 className="text-sm font-semibold text-white">Kuota harian</h3>
-            <p className="text-2xl font-semibold tabular-nums text-white">
+            <p className="font-mono-code text-2xl font-semibold tabular-nums text-white">
               {format.format(remaining)}{" "}
               <span className="text-sm font-normal text-zinc-400">
                 request tersisa

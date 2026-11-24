@@ -126,3 +126,10 @@ pre { max-inline-size: 100%; overflow-x: auto; overflow-wrap: normal; }
 .quota-progress::-webkit-progress-bar { background: #27272a; }
 .quota-progress::-webkit-progress-value { background: #ef4444; }
 .quota-progress::-moz-progress-bar { background: #ef4444; }
+
+.portal-hero {
+  background-color: #111116;
+  background-image:
+    radial-gradient(ellipse at 12% 6%, rgb(153 27 27 / 26%), transparent 60%),
+    repeating-linear-gradient(90deg, rgb(255 255 255 / 2%) 0 1px, transparent 1px 36px);
+}

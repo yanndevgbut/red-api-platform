@@ -116,7 +116,7 @@ export default function PricingTiers({
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-3xl font-semibold tracking-tight text-white">
+        <h1 className="font-bebas text-4xl leading-none text-white sm:text-5xl">
           Paket dan harga
         </h1>
         <p className="mt-3 text-sm text-zinc-400">
@@ -157,7 +157,7 @@ export default function PricingTiers({
                   </span>
                 )}
               </header>
-              <p className="text-2xl font-semibold tabular-nums text-white">
+              <p className="font-mono-code text-2xl font-semibold tabular-nums text-white">
                 {plan.price ? money(plan.price) : "Gratis"}
                 {plan.price > 0 && (
                   <span className="ml-1 text-xs font-normal text-zinc-400">
