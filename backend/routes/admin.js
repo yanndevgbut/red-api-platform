@@ -3,10 +3,11 @@ const supabase = require('../config/supabase');
 const requireAdmin = require('../middleware/admin-session');
 const { readCategories } = require('./categories');
 const { setMaintenance } = require('../lib/maintenance-state');
-const { clearManagedPlan, queueUserCleanup, cleanupUser } = require('../lib/billing');
+const { catalog, queueUserCleanup, cleanupUser } = require('../lib/billing');
+const { withOperations } = require('../lib/operations-store');
 const router = express.Router();
 const profileFields = 'id,username,email,role,plan,limit_daily,limit_remaining,banned,created_at';
-const plans = { free: 100, basic: 3000, vip: 15000, enterprise: 999999 };
+const plans = { free: 100, basic: catalog.basic.daily, vip: catalog.vip.daily, enterprise: catalog.enterprise.daily };
 const fail = (res, status, error) => res.status(status).json({ error });
 const uuid = value => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
 router.use(requireAdmin);
@@ -43,11 +44,23 @@ router.patch('/users/:id', async (req, res) => {
   if (req.get('x-confirm-action') !== 'update-user') return fail(res, 400, 'Konfirmasi diperlukan.');
   if (req.params.id === req.apiUser.id && ('role' in body || body.banned === true)) return fail(res, 403, 'Anda tidak dapat mencabut akses admin sendiri.');
   const changes = { ...body, updated_at: new Date().toISOString() };
-  if (body.plan) changes.limit_daily = plans[body.plan];
-  const result = await supabase.from('profiles').update(changes).eq('id', req.params.id).select(profileFields).maybeSingle();
-  if (result.error) return fail(res, 503, 'Pengguna tidak dapat diperbarui.');
-  if (result.data && body.plan) { try { await clearManagedPlan(req.params.id); } catch { return fail(res,503,'Status langganan belum tersinkronisasi. Coba lagi.'); } }
-  return result.data ? res.json(result.data) : fail(res, 404, 'Pengguna tidak ditemukan.');
+  const update = () => supabase.from('profiles').update(changes).eq('id', req.params.id).select(profileFields).maybeSingle();
+  try {
+    const result = body.plan ? await withOperations(async (state, save) => {
+      changes.limit_daily = plans[body.plan];
+      changes.limit_remaining = plans[body.plan];
+      const updated = await update();
+      if (!updated.error && updated.data && state.subscriptions[req.params.id]) {
+        delete state.subscriptions[req.params.id];
+        await save();
+      }
+      return updated;
+    }) : await update();
+    if (result.error) return fail(res, 503, 'Pengguna tidak dapat diperbarui.');
+    return result.data ? res.json(result.data) : fail(res, 404, 'Pengguna tidak ditemukan.');
+  } catch {
+    return fail(res, 503, 'Status langganan belum tersinkronisasi. Coba lagi.');
+  }
 });
 router.delete('/users/:id', async (req, res) => {
   if (!uuid(req.params.id)) return fail(res,400,'ID pengguna tidak valid.');

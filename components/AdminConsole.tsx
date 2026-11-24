@@ -17,6 +17,7 @@ import AccessLogs from "@/components/admin/AccessLogs";
 import CategoryManager from "@/components/admin/CategoryManager";
 import SystemSettings from "@/components/admin/SystemSettings";
 import AnnouncementManager from "@/components/admin/AnnouncementManager";
+import BugReportManager from "@/components/admin/BugReportManager";
 import PaymentManager from "@/components/admin/PaymentManager";
 import { useConfirmation } from "@/components/ActionModal";
 import { RefreshCw } from "lucide-react";
@@ -55,7 +56,7 @@ export default function AdminConsole({ section }: { section: AdminSection }) {
 
   const fetchData = useCallback(
     async (signal: AbortSignal): Promise<AdminSnapshot> => {
-      if (["announcements", "payments"].includes(section)) return {};
+      if (["announcements", "payments", "bug-reports"].includes(section)) return {};
       if (section === "new-endpoint" || section === "categories") {
         const response = await fetch("/api/categories", {
           signal,
@@ -223,7 +224,7 @@ export default function AdminConsole({ section }: { section: AdminSection }) {
       busy ||
       !(await askConfirm({
         title: "Konfirmasi perubahan akun",
-        message: `${action} untuk ${target?.email || id}? Perubahan akan langsung memengaruhi akses pengguna.${changes.plan ? " Perubahan paket manual ini tidak memakai masa aktif otomatis." : ""}`,
+        message: `${action} untuk ${target?.email || id}? Perubahan akan langsung memengaruhi akses pengguna.${changes.plan ? " Perubahan paket manual mengisi ulang kuota sesuai paket dan menghapus masa aktif otomatis." : ""}`,
       }))
     )
       return;
@@ -303,7 +304,7 @@ export default function AdminConsole({ section }: { section: AdminSection }) {
           </p>
         </div>
       </header>
-      {!["announcements", "payments"].includes(section) && (
+      {!["announcements", "payments", "bug-reports"].includes(section) && (
         <div
           role="status"
           className="flex flex-wrap items-center justify-between gap-3 text-xs font-mono-code text-zinc-400"
@@ -336,6 +337,7 @@ export default function AdminConsole({ section }: { section: AdminSection }) {
       >
         {section === "announcements" && <AnnouncementManager />}
         {section === "payments" && <PaymentManager />}
+        {section === "bug-reports" && <BugReportManager />}
         {section === "endpoints" && (
           <EndpointRegistry
             endpoints={endpoints}

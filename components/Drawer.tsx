@@ -42,6 +42,7 @@ export default function Drawer({
     { id: "docs", label: "02. DOCS & TESTER (INLINE)", protected: true },
     { id: "pricing", label: "03. PRICING TIERS", protected: false },
     { id: "profile", label: "04. PROFILE & API KEYS", protected: true },
+    { id: "bug-report", label: "Laporkan Bug", protected: true },
   ];
 
   return (

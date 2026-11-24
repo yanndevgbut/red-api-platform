@@ -4,6 +4,7 @@ import React, { useEffect, useState } from "react";
 import { BrandWordmark } from "@/components/BrandLogo";
 import PageLoading from "@/components/PageLoading";
 import Navbar from "@/components/Navbar";
+import BugReportForm from "@/components/BugReportForm";
 import Drawer from "@/components/Drawer";
 import ActionModal from "@/components/ActionModal";
 import PortalNotices from "@/components/PortalNotices";
@@ -43,7 +44,7 @@ export default function Platform({ initialTab = "landing", adminSection }: { ini
 
   useEffect(() => {
     const tab = new URLSearchParams(window.location.search).get("tab");
-    if (tab && ["landing", "docs", "profile", "pricing", "admin"].includes(tab)) setActiveTab(tab);
+    if (tab && ["landing", "docs", "profile", "pricing", "admin", "bug-report"].includes(tab)) setActiveTab(tab);
 
     let disposed = false;
     const timeout = setTimeout(() => {
@@ -95,7 +96,12 @@ export default function Platform({ initialTab = "landing", adminSection }: { ini
       }
     }
     void loadAccount(session.access_token);
-    return () => controller.abort();
+    const refreshAccount = () => setRefresh(value => value + 1);
+    window.addEventListener("focus", refreshAccount);
+    return () => {
+      controller.abort();
+      window.removeEventListener("focus", refreshAccount);
+    };
   }, [session, refresh]);
 
   const currentUser = session?.user.id === user?.id ? user : null;
@@ -119,7 +125,7 @@ export default function Platform({ initialTab = "landing", adminSection }: { ini
 
   const handleTabSelect = async (tabId: string) => {
     if (tabId === "admin" && !canAdmin) { setActiveTab("landing"); router.replace("/"); return; }
-    const protectedTabs = ["docs", "profile", "admin"];
+    const protectedTabs = ["docs", "profile", "admin", "bug-report"];
     if (protectedTabs.includes(tabId) && !session) {
       const reasons: Record<string, string> = {
         docs: "Halaman dokumentasi & playground interaktif memerlukan login Google untuk menggunakan API Key.",
@@ -143,6 +149,7 @@ export default function Platform({ initialTab = "landing", adminSection }: { ini
       router.push(`/?tab=${tabId}`);
       return;
     }
+    if (tabId === "profile") setRefresh(value => value + 1);
     setActiveTab(tabId);
   };
 
@@ -155,7 +162,7 @@ export default function Platform({ initialTab = "landing", adminSection }: { ini
     setSession(null);
     setUser(null);
     setApiKey(null);
-    if (["docs", "profile", "admin"].includes(activeTab)) {
+    if (["docs", "profile", "admin", "bug-report"].includes(activeTab)) {
       setActiveTab("landing");
       if (adminSection) router.replace("/");
     }
@@ -308,7 +315,7 @@ export default function Platform({ initialTab = "landing", adminSection }: { ini
         {/* VIEW 3: PRICING (Public) */}
         {activeTab === "pricing" && (
           <section className="animate-fade-in">
-            <PricingTiers currentPlan={currentUser?.plan || "free"} loggedIn={!!session} qrisReady={!!portal.data?.qrisReady} onLogin={() => {setAuthReason("Login untuk membeli paket dan mengirim bukti pembayaran.");setAuthModalOpen(true);}} />
+            <PricingTiers key={session?.user.id ?? "guest"} currentPlan={currentUser?.plan || "free"} loggedIn={!!session} qrisReady={!!portal.data?.qrisReady} onLogin={() => {setAuthReason("Login untuk membeli paket dan mengirim bukti pembayaran.");setAuthModalOpen(true);}} />
           </section>
         )}
 
@@ -341,6 +348,16 @@ export default function Platform({ initialTab = "landing", adminSection }: { ini
               <UserDashboard accessToken={session?.access_token ?? ""} user={currentUser} apiKey={currentKey} onKeyRotated={key => { setApiKey(key); setRefresh(value => value + 1); }} onRefresh={() => { setApiKey(null); setRefresh(value => value + 1); }} />
             )}
           </section>
+        )}
+
+        {activeTab === "bug-report" && (
+          currentUser && currentUser.banned === false
+            ? <BugReportForm key={currentUser.id} />
+            : <section className="mx-auto max-w-xl rounded-xl border border-surface-border bg-surface-panel p-6">
+                <h1 className="font-bebas text-3xl text-white">Laporkan Bug</h1>
+                {session ? <p className="mt-2 text-sm text-zinc-400">Akun aktif diperlukan untuk mengirim laporan.</p> :
+                  <button type="button" className="mt-3 rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white" onClick={() => { setAuthReason("Masuk dengan Google untuk melaporkan bug."); setAuthModalOpen(true); }}>Masuk dengan Google</button>}
+              </section>
         )}
 
         {/* Admin components are mounted only after the verified account is authorized. */}

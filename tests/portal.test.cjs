@@ -145,6 +145,26 @@ test('announcements, private receipts, manual approvals, expiry, delete users an
       ...(body ? { body: JSON.stringify(body) } : {}),
     });
   try {
+    const reportPath = '/api/portal/bug-reports';
+    const reportAdminPath = '/api/portal/admin/bug-reports';
+    const reportBody = { category: 'endpoint', title: 'Endpoint tidak merespons', description: 'Jalankan endpoint contoh lalu tunggu respons.' };
+    assert.equal((await req(null, reportPath, 'POST', reportBody)).status, 401);
+    assert.equal((await req('banned', reportPath, 'POST', reportBody)).status, 403);
+    assert.equal((await req('member', reportPath, 'POST', {...reportBody, category:'invalid'})).status, 400);
+    const created = await req('member', reportPath, 'POST', {...reportBody, userId:ids.admin, status:'resolved'});
+    assert.equal(created.status, 201);
+    const {id:reportId} = await created.json();
+    assert.equal((await req('member', reportAdminPath)).status, 403);
+    assert.equal((await req('member', reportAdminPath+'/'+reportId+'/resolve', 'POST', {})).status, 403);
+    const reportListing = await (await req('admin', reportAdminPath+'?page=1')).json();
+    assert.equal(reportListing.reports[0].userId, ids.member);
+    assert.equal(reportListing.reports[0].status, 'open');
+    assert.equal((await req('admin', reportAdminPath+'?page=1&page=2')).status,400);
+    assert.equal((await req('admin', reportAdminPath+'/'+reportId+'/resolve', 'POST', {})).status,200);
+    assert.equal((await (await req('admin', reportAdminPath)).json()).reports[0].status,'resolved');
+    for (let index=0; index<4; index++) assert.equal((await req('member',reportPath,'POST',reportBody)).status,201);
+    assert.equal((await req('member',reportPath,'POST',reportBody)).status,429);
+
     assert.throws(() => store.imageData('data:image/svg+xml;base64,PHN2Zz4='));
     assert.throws(() =>
       store.imageData(
@@ -484,6 +504,40 @@ test('announcements, private receipts, manual approvals, expiry, delete users an
       await store.withOperations((state) => state.subscriptions[ids.other]),
       undefined,
     );
+
+    // Enterprise ends each successful purchase at exactly the catalogue quota.
+    const enterpriseReceipt = await store.saveImage(png);
+    async function approveEnterprise(previousPlan, remaining, resume = false) {
+      Object.assign(profiles[ids.other], {
+        plan: resume ? 'enterprise' : previousPlan,
+        limit_daily: previousPlan === 'free' && !resume ? 100 : 999999,
+        limit_remaining: remaining,
+      });
+      const orderId = randomUUID();
+      await store.withOperations(async (state, save) => {
+        state.orders.push({
+          id: orderId, userId: ids.other, plan: 'enterprise', days: 30,
+          receipt: enterpriseReceipt, status: resume ? 'approving' : 'submitted',
+          ...(resume ? { intent: {
+            previousPlan, remaining: 999979,
+            expiresAt: new Date(Date.now() + 86400000).toISOString(),
+            approvedAt: new Date().toISOString(),
+          } } : {}),
+        });
+        await save();
+      });
+      const url = '/api/portal/admin/orders/'+orderId+'/approve';
+      const response = await req('admin', url, 'POST', {}, 'approve-payment');
+      assert.equal(response.status, 200);
+      assert.equal(profiles[ids.other].limit_daily, 999999);
+      assert.equal(profiles[ids.other].limit_remaining, 999999);
+      const writes = updates;
+      assert.equal((await req('admin', url, 'POST', {}, 'approve-payment')).status, 200);
+      assert.equal(updates,writes);
+    }
+    await approveEnterprise('free', 80);
+    await approveEnterprise('enterprise', 1000000);
+    await approveEnterprise('free', 999979, true);
 
     // Saving a message never toggles maintenance, and toggling preserves the saved text.
     const maintenancePath = '/api/admin/maintenance';

@@ -124,6 +124,98 @@ router.use((_req, res, next) => {
   res.set('Cache-Control', 'private, no-store');
   next();
 });
+const bugCategories = new Set(['endpoint', 'website', 'api', 'other']);
+router.post(
+  '/bug-reports',
+  wrap(async (req, res) => {
+    const { category, title, description } = req.body || {};
+    if (
+      !bugCategories.has(category) ||
+      typeof title !== 'string' ||
+      title.trim().length < 5 ||
+      title.length > 120 ||
+      typeof description !== 'string' ||
+      description.trim().length < 15 ||
+      description.length > 2500
+    ) {
+      throw problem(
+        400,
+        'Pilih kategori, isi judul 5–120 karakter dan detail 15–2500 karakter.',
+      );
+    }
+    const report = await withOperations(async (state, save) => {
+      const now = Date.now();
+      const reports = state.bugReports || [];
+      const userId = req.portalUser.id;
+      if (
+        reports.filter(
+          (item) =>
+            item.userId === userId &&
+            Date.parse(item.createdAt) > now - 86400000,
+        ).length >= 5
+      )
+        throw problem(429, 'Batas lima laporan per 24 jam tercapai.');
+      state.bugReports = reports.filter(
+        (item) =>
+          item.status !== 'resolved' ||
+          Date.parse(item.resolvedAt) > now - 90 * 86400000,
+      );
+      if (state.bugReports.length >= 2000)
+        throw problem(
+          503,
+          'Penyimpanan laporan sedang penuh. Coba lagi nanti.',
+        );
+      const item = {
+        id: randomUUID(),
+        userId,
+        category,
+        title: title.trim(),
+        description: description.trim(),
+        status: 'open',
+        createdAt: new Date(now).toISOString(),
+      };
+      state.bugReports.push(item);
+      await save();
+      return item;
+    });
+    res.status(201).json({ id: report.id });
+  }),
+);
+router.get(
+  '/admin/bug-reports',
+  wrap(async (req, res) => {
+    const page = req.query.page ?? '1';
+    if (typeof page !== 'string' || !/^[1-9]\d{0,2}$/.test(page))
+      throw problem(400, 'Halaman laporan tidak valid.');
+    const start = (Number(page) - 1) * 25;
+    const result = await withOperations((state) => {
+      const reports = state.bugReports || [];
+      const end = Math.max(0, reports.length - start);
+      return {
+        reports: reports.slice(Math.max(0, end - 25), end).reverse(),
+        hasNext: start + 25 < reports.length,
+      };
+    });
+    res.json(result);
+  }),
+);
+router.post(
+  '/admin/bug-reports/:id/resolve',
+  wrap(async (req, res) => {
+    const report = await withOperations(async (state, save) => {
+      const row = state.bugReports?.find((item) => item.id === req.params.id);
+      if (!row) throw problem(404, 'Laporan tidak ditemukan.');
+      if (row.status !== 'resolved') {
+        row.status = 'resolved';
+        row.resolvedAt = new Date().toISOString();
+        audit(state, req.portalUser.id, 'bug-report.resolve', row.id);
+        await save();
+      }
+      return row;
+    });
+    res.json(report);
+  }),
+);
 router.get(
   '/state',
   wrap(async (_req, res) => {
@@ -488,14 +580,23 @@ router.post(
         limit_daily: catalog[item.plan].daily,
         updated_at: new Date().toISOString(),
       };
-      if (intent.previousPlan !== item.plan)
+      const enterprise = item.plan === 'enterprise';
+      if (enterprise) changes.limit_remaining = catalog.enterprise.daily;
+      else if (intent.previousPlan !== item.plan)
         changes.limit_remaining = intent.remaining;
-      if (profile.data.plan === intent.previousPlan) {
+      // Recover older in-progress Enterprise grants that switched plans with a partial quota.
+      const needsEnterpriseReset =
+        enterprise &&
+        profile.data.plan === item.plan &&
+        (profile.data.limit_daily !== catalog.enterprise.daily ||
+          profile.data.limit_remaining !== catalog.enterprise.daily);
+      if (profile.data.plan === intent.previousPlan || needsEnterpriseReset) {
         const update = await supabase
           .from('profiles')
           .update(changes)
           .eq('id', item.userId)
-          .eq('plan', intent.previousPlan)
+          .eq('plan', profile.data.plan)
+          .eq('banned', false)
           .select('id');
         if (update.error) throw new Error('Plan update failed');
         if (!update.data?.length)

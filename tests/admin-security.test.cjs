@@ -36,6 +36,11 @@ test('admin API rejects members, forged/revoked credentials, banned admins and m
     assert.equal((await req('admin', target, 'PATCH', { banned: true })).status, 400, 'confirmation is required before mutation');
     assert.equal((await req('admin', target, 'PATCH', { banned: true }, { 'X-Confirm-Action': 'update-user' })).status, 200);
     assert.equal(writes, 1);
+    const changed = await req('admin', target, 'PATCH', {plan:'enterprise'}, {'X-Confirm-Action':'update-user'});
+    assert.equal(changed.status, 200);
+    const assigned = await changed.json();
+    assert.equal(assigned.limit_daily, 999999);
+    assert.equal(assigned.limit_remaining, 999999);
     profiles.admin.banned = true;
     assert.equal((await req('admin')).status, 403, 'ban is checked again on every request');
   } finally { await new Promise(resolve => server.close(resolve)); }

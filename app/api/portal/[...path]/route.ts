@@ -18,14 +18,15 @@ async function proxy(
         "orders",
         "admin/announcements",
         "admin/orders",
+        "admin/bug-reports",
         "admin/payment-settings",
         "admin/qris",
       ].includes(path) ||
         new RegExp(`^orders/${id}/(qris|proof)$`, "i").test(path))) ||
     (req.method === "POST" &&
-      (["orders", "admin/announcements", "admin/qris"].includes(path) ||
+      (["orders", "bug-reports", "admin/announcements", "admin/qris"].includes(path) ||
         new RegExp(
-          `^orders/${id}/proof$|^admin/orders/${id}/(approve|reject)$`,
+          `^orders/${id}/proof$|^admin/orders/${id}/(approve|reject)$|^admin/bug-reports/${id}/resolve$`,
           "i",
         ).test(path))) ||
     (req.method === "DELETE" &&
@@ -86,7 +87,10 @@ async function proxy(
       }
       headers.set("Content-Type", "application/json");
     }
-    const response = await fetch(new URL(`/api/portal/${path}`, origin), {
+    const upstream = new URL(`/api/portal/${path}`, origin);
+    const page = req.nextUrl.searchParams.get("page");
+    if (path === "admin/bug-reports" && page !== null) upstream.searchParams.set("page", page);
+    const response = await fetch(upstream, {
       method: req.method,
       headers,
       body,

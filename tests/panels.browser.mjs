@@ -91,6 +91,23 @@ try {
   await member.getByText('Respons API key tidak valid.', { exact: true }).waitFor();
   await member.waitForFunction(() => document.querySelector('input[aria-label="API key"]')?.value === 'red_live_new_member');
   console.log('PASS key rotation updates the vault, errors recover state and foreign-account keys are rejected');
+  const reportId = '10000000-0000-4000-8000-000000000009';
+  let submittedReport;
+  await member.route('**/api/portal/bug-reports', route => {
+    assert.equal(route.request().headers().authorization, 'Bearer member-token');
+    submittedReport = route.request().postDataJSON();
+    return route.fulfill({status:201,json:{id:reportId}});
+  });
+  await member.setViewportSize({width:320,height:850});
+  await member.getByRole('button',{name:'Buka menu navigasi'}).click();
+  await member.getByRole('button',{name:'Laporkan Bug',exact:true}).click();
+  await member.getByLabel('Kategori',{exact:true}).selectOption('endpoint');
+  await member.getByLabel('Judul laporan',{exact:true}).fill('Endpoint pengujian gagal');
+  await member.getByLabel('Detail masalah',{exact:true}).fill('<img src=x onerror=alert(1)> detail laporan');
+  await member.getByRole('button',{name:'Kirim laporan'}).click();
+  await member.getByText('Laporan terkirim. ID laporan '+reportId+'.',{exact:true}).waitFor();
+  assert.equal(submittedReport.category,'endpoint');
+  assert.equal(await member.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);
   await member.close();
 
   const admin = await newPage('test-token', 1280);
@@ -100,6 +117,18 @@ try {
     return route.fulfill({ status: route.request().method() === 'POST' ? 201 : 200, json: { categories } });
   });
   await admin.route('**/api/portal/admin/announcements',route=>route.fulfill({json:[]}));
+  let reportStatus = 'open';
+  await admin.route('**/api/portal/admin/bug-reports?page=1', route => {
+    assert.equal(route.request().headers().authorization, 'Bearer test-token');
+    return route.fulfill({json:{hasNext:false,reports:[{
+      ...submittedReport,id:reportId,userId:ids['member-token'],status:reportStatus,createdAt:new Date().toISOString()
+    }]}});
+  });
+  await admin.route('**/api/portal/admin/bug-reports/*/resolve', route => {
+    assert.equal(route.request().method(),'POST');
+    reportStatus = 'resolved';
+    return route.fulfill({json:{status:reportStatus}});
+  });
   await admin.route('**/api/portal/admin/orders',route=>route.fulfill({json:[]}));
   await admin.route('**/api/portal/admin/payment-settings',route=>route.fulfill({json:{qrisReady:false,note:''}}));
   await admin.route('**/api/admin/endpoints', route => route.fulfill({ json: [] }));
@@ -113,13 +142,20 @@ try {
   await admin.getByRole('heading', { name: 'Endpoint Registry', exact: true }).waitFor();
   const cookie = (await admin.context().cookies()).find(cookie => cookie.name === 'red_admin_session');
   assert.ok(cookie?.httpOnly); assert.equal(cookie.path, '/admin'); assert.equal(cookie.sameSite, 'Strict'); assert.ok(cookie.secure);
-  for (const [id, title] of [['new-endpoint', 'Tambah Endpoint'], ['categories', 'Kategori'], ['users', 'Manajemen Pengguna'], ['logs', 'Log Akses'], ['settings', 'Pengaturan Sistem'], ['announcements','Pengumuman'], ['payments','Pembayaran'], ['endpoints', 'Endpoint Registry']]) {
+  for (const [id, title] of [['new-endpoint', 'Tambah Endpoint'], ['categories', 'Kategori'], ['users', 'Manajemen Pengguna'], ['logs', 'Log Akses'], ['settings', 'Pengaturan Sistem'], ['announcements','Pengumuman'], ['payments','Pembayaran'], ['bug-reports','Laporan Bug'], ['endpoints', 'Endpoint Registry']]) {
     await admin.getByRole('button', { name: 'Buka menu admin' }).click();
     const menu = admin.getByRole('dialog', { name: 'MENU ADMIN' });
     await menu.getByRole('link', { name: new RegExp(title) }).click();
     await admin.waitForURL('**/admin/' + id);
     await admin.getByRole('heading', { name: title, exact: true }).waitFor();
     for (const width of [320, 360, 768]) { await admin.setViewportSize({ width, height: 850 }); assert.equal(await admin.evaluate(() => document.documentElement.scrollWidth > innerWidth), false); }
+    if (id === 'bug-reports') {
+      await admin.getByText(submittedReport.description,{exact:true}).waitFor();
+      assert.equal(await admin.locator('img[src="x"]').count(),0);
+      await admin.getByRole('button',{name:'Tandai selesai',exact:true}).click();
+      await admin.getByText('Selesai',{exact:true}).waitFor();
+      console.log('PASS bug report form, private admin inbox, escaped report text, and resolution');
+    }
     if (id === 'categories') {
       await admin.getByLabel('Nama kategori', { exact: true }).fill('Utilities');
       await admin.getByRole('button', { name: 'Tambah kategori', exact: true }).click();

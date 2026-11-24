@@ -53,12 +53,6 @@ async function ensureEntitlement(userId) {
     await save();
   });
 }
-async function clearManagedPlan(userId) {
-  return withOperations(async (state, save) => {
-    delete state.subscriptions[userId];
-    await save();
-  });
-}
 async function queueUserCleanup(userId) {
   return withOperations(async (state, save) => {
     state.cleanupPending = [
@@ -70,6 +64,9 @@ async function queueUserCleanup(userId) {
 async function cleanupUser(userId) {
   return withOperations(async (state, save) => {
     const files = [];
+    for (const report of state.bugReports || []) {
+      if (report.userId === userId) report.userId = null;
+    }
     delete state.subscriptions[userId];
     state.cleanupPending = (state.cleanupPending || []).filter(
       (id) => id !== userId,
@@ -118,7 +115,6 @@ module.exports = {
   permitsPurchase,
   audit,
   ensureEntitlement,
-  clearManagedPlan,
   queueUserCleanup,
   cleanupUser,
   startBillingReconciler,
