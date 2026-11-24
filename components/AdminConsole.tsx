@@ -293,12 +293,9 @@ export default function AdminConsole({ section }: { section: AdminSection }) {
       <header className="flex items-start gap-3 border-b border-surface-border pb-5 sm:gap-4">
         <AdminNavigation section={section} />
         <div className="min-w-0 space-y-1">
-          <p className="font-mono-code text-[10px] tracking-widest text-red-400">
-            RED API · ADMIN
-          </p>
-          <h2 className="font-bebas text-3xl text-white sm:text-4xl">
+          <h1 className="text-2xl font-semibold tracking-tight text-white sm:text-3xl">
             {current.title}
-          </h2>
+          </h1>
           <p className="text-xs leading-relaxed text-zinc-400">
             {current.description}
           </p>
@@ -315,7 +312,7 @@ export default function AdminConsole({ section }: { section: AdminSection }) {
               : error ||
                 (refreshing
                   ? "Memperbarui data..."
-                  : `Data panel tersinkronisasi.${section === "users" ? " Maksimal 200 akun terbaru." : ""}`)}
+                  : (section === "users" ? "Menampilkan hingga 200 akun terbaru." : ""))}
           </span>
           <button
             type="button"
@@ -326,7 +323,7 @@ export default function AdminConsole({ section }: { section: AdminSection }) {
             <RefreshCw
               className={`h-3 w-3 ${refreshing ? "animate-spin" : ""}`}
             />{" "}
-            Coba lagi / Refresh
+            Muat ulang
           </button>
         </div>
       )}

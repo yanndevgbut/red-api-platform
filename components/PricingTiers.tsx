@@ -115,8 +115,10 @@ export default function PricingTiers({
   }
   return (
     <div className="space-y-8">
-      <div className="text-center">
-        <h2 className="font-bebas text-5xl">PILIH PAKET ANDA</h2>
+      <div>
+        <h1 className="text-3xl font-semibold tracking-tight text-white">
+          Paket dan harga
+        </h1>
         <p className="mt-3 text-sm text-zinc-400">
           Pembayaran QRIS manual. Paket aktif 30 hari setelah disetujui admin.
         </p>
@@ -138,44 +140,62 @@ export default function PricingTiers({
         </p>
       )}
       <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-4">
-        {plans.map((plan) => (
-          <article
-            key={plan.id}
-            className="flex min-w-0 flex-col gap-5 rounded-xl border border-surface-border bg-surface-panel p-6"
-          >
-            <h3 className="font-bebas text-3xl">{plan.name}</h3>
-            <p className="font-bebas text-4xl">{money(plan.price)}</p>
-            <p className="text-sm text-zinc-400">
-              {plan.price ? "30 hari / persetujuan manual" : "Gratis"}
-            </p>
-            <p className="flex-1 text-sm">
-              {plan.daily.toLocaleString("id-ID")} request / hari
-              <br />
-              <span className="text-xs text-zinc-500">
-                Akses mengikuti persyaratan paket setiap endpoint.
-              </span>
-            </p>
-            <button
-              disabled={
-                plan.id === "free" || busy || !qrisReady || lowerPlan(plan.id)
-              }
-              onClick={() => void purchase(plan.id)}
-              className="rounded-lg bg-red-600 px-4 py-3 disabled:bg-zinc-800 disabled:text-zinc-500"
+        {plans.map((plan) => {
+          const active = loggedIn && plan.id === (serverPlan || currentPlan);
+          return (
+            <article
+              key={plan.id}
+              className={`flex min-w-0 flex-col gap-4 rounded-xl border bg-surface-panel p-5 ${active ? "border-red-700" : "border-surface-border"}`}
             >
-              {plan.id === "free"
-                ? "Paket gratis"
-                : lowerPlan(plan.id)
-                  ? "Paket lebih rendah"
-                  : busy
-                    ? "Memproses..."
-                    : `Beli ${plan.name}`}
-            </button>
-          </article>
-        ))}
+              <header className="flex flex-wrap items-center gap-2">
+                <h2 className="text-lg font-semibold text-white">
+                  {plan.name}
+                </h2>
+                {active && (
+                  <span className="rounded-full bg-red-950 px-2 py-1 text-xs text-red-200">
+                    Paket aktif
+                  </span>
+                )}
+              </header>
+              <p className="text-2xl font-semibold tabular-nums text-white">
+                {plan.price ? money(plan.price) : "Gratis"}
+                {plan.price > 0 && (
+                  <span className="ml-1 text-xs font-normal text-zinc-400">
+                    / 30 hari
+                  </span>
+                )}
+              </p>
+              <p className="flex-1 text-sm text-zinc-300">
+                {plan.daily.toLocaleString("id-ID")} request per hari
+              </p>
+              {plan.price > 0 && (
+                <button
+                  type="button"
+                  disabled={busy || !qrisReady || lowerPlan(plan.id)}
+                  onClick={() => void purchase(plan.id)}
+                  className="min-h-11 rounded-lg bg-red-600 px-3 py-2 text-sm font-semibold text-white hover:bg-red-500 disabled:bg-zinc-800 disabled:text-zinc-400"
+                >
+                  {lowerPlan(plan.id)
+                    ? "Paket lebih rendah"
+                    : busy
+                      ? "Memproses…"
+                      : active
+                        ? `Perpanjang ${plan.name}`
+                        : `Beli ${plan.name}`}
+                </button>
+              )}
+            </article>
+          );
+        })}
       </div>
+      <p className="text-sm text-zinc-400">
+        Paket minimum untuk tiap endpoint tercantum di dokumentasi.
+      </p>
       {loggedIn && (
         <section className="space-y-3">
-          <h3 className="font-bebas text-2xl">RIWAYAT PEMBAYARAN</h3>
+          <h2 className="text-lg font-semibold text-white">
+            Riwayat pembayaran
+          </h2>
           {!orders.length && (
             <p className="text-sm text-zinc-500">Belum ada pesanan.</p>
           )}

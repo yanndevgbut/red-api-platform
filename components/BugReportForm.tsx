@@ -5,7 +5,7 @@ import { bugCategories } from "@/lib/bug-reports";
 import { portalRequest } from "@/lib/portal-client";
 
 const fieldStyle =
-  "w-full rounded-lg border border-surface-border bg-black px-3 py-2 text-sm text-white focus:border-red-500 focus:outline-none";
+  "w-full rounded-lg border border-surface-border bg-black px-3 py-2 text-base text-white focus:border-red-500 focus:outline-none";
 
 export default function BugReportForm() {
   const [sending, setSending] = useState(false);
@@ -37,7 +37,7 @@ export default function BugReportForm() {
   return (
     <section className="mx-auto max-w-2xl space-y-5 rounded-xl border border-surface-border bg-surface-panel p-5 sm:p-8">
       <div>
-        <h1 className="font-bebas text-4xl text-white">Laporkan Bug</h1>
+        <h1 className="text-3xl font-semibold tracking-tight text-white">Laporkan Bug</h1>
         <p className="mt-1 text-sm text-zinc-400">
           Ceritakan masalah yang Anda alami di RED API.
         </p>
@@ -91,7 +91,7 @@ export default function BugReportForm() {
           </p>
           <button
             type="submit"
-            className="rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-500 disabled:opacity-60"
+            className="min-h-11 rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-500 disabled:opacity-60"
           >
             {sending ? "Mengirim…" : "Kirim laporan"}
           </button>

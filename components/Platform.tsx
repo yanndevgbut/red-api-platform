@@ -128,8 +128,8 @@ export default function Platform({ initialTab = "landing", adminSection }: { ini
     const protectedTabs = ["docs", "profile", "admin", "bug-report"];
     if (protectedTabs.includes(tabId) && !session) {
       const reasons: Record<string, string> = {
-        docs: "Halaman dokumentasi & playground interaktif memerlukan login Google untuk menggunakan API Key.",
-        profile: "Halaman manajemen profil & API Key membutuhkan autentikasi akun Google.",
+        docs: "Masuk untuk melihat API key dan mencoba endpoint.",
+        profile: "Masuk untuk mengelola profil dan API key.",
         admin: "Halaman admin console hanya dapat diakses setelah login dengan akun admin yang terverifikasi.",
       };
       setAuthReason(reasons[tabId] || "Silakan login dengan Google untuk mengakses halaman ini.");
@@ -151,6 +151,7 @@ export default function Platform({ initialTab = "landing", adminSection }: { ini
     }
     if (tabId === "profile") setRefresh(value => value + 1);
     setActiveTab(tabId);
+    window.scrollTo({ top: 0, behavior: "instant" });
   };
 
   const handleLogout = async () => {
@@ -190,6 +191,7 @@ export default function Platform({ initialTab = "landing", adminSection }: { ini
 
   return (
     <>
+      <a href="#konten-utama" className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-2 focus:z-50 focus:rounded-lg focus:bg-surface-panel focus:p-3">Lewati ke konten</a>
       {portal.data && activeTab !== "admin" && <PortalNotices state={portal.data} identity={session?.user.id || "guest"} />}
 
       {/* Navigation Header */}
@@ -197,22 +199,23 @@ export default function Platform({ initialTab = "landing", adminSection }: { ini
         activeTab={activeTab}
         setActiveTab={handleTabSelect}
         openDrawer={() => setDrawerOpen(true)}
+        drawerOpen={drawerOpen}
         user={currentUser}
         onLoginClick={() => {
-          setAuthReason("Masuk dengan Google untuk membuka akses seluruh fitur platform.");
+          setAuthReason("Gunakan akun Google untuk masuk ke RED API.");
           setAuthModalOpen(true);
         }}
-        onLogoutClick={handleLogout}
       />
 
       {/* Right Slide-over Navigation Drawer */}
       <Drawer
         isOpen={drawerOpen}
+        activeTab={activeTab}
         onClose={() => setDrawerOpen(false)}
         setActiveTab={handleTabSelect}
         user={currentUser}
         onLoginClick={() => {
-          setAuthReason("Masuk dengan Google untuk membuka akses seluruh fitur platform.");
+          setAuthReason("Gunakan akun Google untuk masuk ke RED API.");
           setAuthModalOpen(true);
         }}
         onLogoutClick={handleLogout}
@@ -226,7 +229,7 @@ export default function Platform({ initialTab = "landing", adminSection }: { ini
       />
 
       {/* Main Container */}
-      <main className="flex-1 min-w-0 max-w-7xl w-full mx-auto p-4 sm:p-6">
+      <main id="konten-utama" className="mx-auto w-full min-w-0 max-w-7xl flex-1 px-4 py-6 sm:px-6 sm:py-8">
         {accountError && (
           <div role="status" className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-red-900 bg-red-950/30 p-3 text-sm text-red-200">
             <span>{accountError}</span>
@@ -236,49 +239,26 @@ export default function Platform({ initialTab = "landing", adminSection }: { ini
 
         {/* VIEW 1: LANDING / OVERVIEW (Public) */}
         {activeTab === "landing" && (
-          <section className="space-y-12 animate-fade-in">
-            {/* Hero Section */}
-            <div className="hero-panel relative rounded-2xl border border-surface-border p-4 sm:p-8 lg:p-12">
-              <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-                <div className="min-w-0 lg:col-span-7 space-y-5 sm:space-y-6">
-                  <h1 className="hero-title font-bebas tracking-tight text-white">
-                    REST API <br />
-                    <span className="text-red-400">UNTUK BOT</span> <br />
-                    DAN APLIKASI
-                  </h1>
-
-                  <p className="text-zinc-400 text-base max-w-xl leading-relaxed">
-                    Pilih endpoint, coba request langsung dari browser, lalu gunakan API key untuk menghubungkannya ke bot atau aplikasi Anda.
-                  </p>
-
-                  <div className="grid grid-cols-1 min-[420px]:flex flex-wrap items-center gap-3 pt-2">
-                    <button
-                      onClick={() => handleTabSelect("docs")}
-                      className="action-button justify-center rounded-lg px-4 sm:px-6 py-3 bg-red-500 hover:bg-red-400 text-black font-bebas text-2xl tracking-wider uppercase transition-all active:scale-95 shadow-[0_0_20px_rgba(220,38,38,0.3)] hover:shadow-[0_0_30px_rgba(220,38,38,0.6)] flex items-center gap-2"
-                    >
-                      LIHAT ENDPOINT
-                      <ArrowRight className="w-5 h-5" />
-                    </button>
-
-                    <button
-                      onClick={() => handleTabSelect("pricing")}
-                      className="action-button rounded-lg px-4 sm:px-6 py-3 border border-surface-border hover:border-red-500 text-white font-bebas text-2xl tracking-wider uppercase transition-colors"
-                    >
-                      LIHAT PAKET
-                    </button>
-                  </div>
-                </div>
-
-                {/* Right Code Box */}
-                <div className="min-w-0 lg:col-span-5 lg:self-center">
-                  <CodeSnippet />
+          <>
+            <section className="grid min-w-0 items-center gap-7 rounded-2xl border border-surface-border bg-surface-panel p-5 sm:p-8 lg:grid-cols-[1.2fr_1fr] lg:gap-10 lg:p-10">
+              <div className="min-w-0 space-y-5">
+                <h1 className="max-w-xl text-[clamp(2rem,5vw,3.5rem)] font-semibold leading-[1.1] tracking-tight text-white">REST API untuk bot dan aplikasi</h1>
+                <p className="max-w-lg text-sm leading-relaxed text-zinc-300 sm:text-base">
+                  Unduh media dari tautan publik, ambil screenshot, atau perbesar gambar. Coba endpoint di browser sebelum memasangnya di aplikasi.
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  <button type="button" onClick={() => handleTabSelect("docs")} className="inline-flex min-h-11 items-center gap-2 rounded-lg bg-red-600 px-4 text-sm font-semibold text-white hover:bg-red-500">
+                    Jelajahi endpoint <ArrowRight className="h-4 w-4" aria-hidden="true" />
+                  </button>
+                  <button type="button" onClick={() => handleTabSelect("pricing")} className="inline-flex min-h-11 items-center rounded-lg border border-surface-border px-4 text-sm font-medium text-white hover:bg-surface-card">
+                    Lihat paket
+                  </button>
                 </div>
               </div>
-            </div>
-
-            {/* Live Telemetry Widget */}
-            <TelemetryWidget />
-          </section>
+              <CodeSnippet />
+            </section>
+            <div className="mt-8"><TelemetryWidget /></div>
+          </>
         )}
 
         {/* VIEW 2: DOCS & ACCORDION INLINE TESTER (Protected) */}
@@ -289,10 +269,10 @@ export default function Platform({ initialTab = "landing", adminSection }: { ini
                 <div className="w-12 h-12 bg-red-950/80 border border-red-800 rounded-full flex items-center justify-center mx-auto text-red-500">
                   <Lock className="w-6 h-6" />
                 </div>
-                <h3 className="font-bebas text-4xl text-white tracking-wide">
-                  DOKUMENTASI & TESTER TERKUNCI
+                <h3 className="text-2xl font-semibold tracking-tight text-white">
+                  Masuk untuk mencoba endpoint
                 </h3>
-                <p className="text-xs font-mono-code text-zinc-400 max-w-md mx-auto leading-relaxed">
+                <p className="max-w-md mx-auto text-sm leading-relaxed text-zinc-400">
                   Untuk menguji endpoint dan mendapatkan API Key produksi, silakan login menggunakan akun Google Anda terlebih dahulu.
                 </p>
                 <button
@@ -300,10 +280,10 @@ export default function Platform({ initialTab = "landing", adminSection }: { ini
                     setAuthReason("Login Google untuk mengakses dokumentasi & live tester.");
                     setAuthModalOpen(true);
                   }}
-                  className="px-6 py-2.5 bg-red-600 hover:bg-red-500 text-black font-bold font-mono-code text-xs rounded uppercase inline-flex items-center gap-2 shadow-[0_0_20px_rgba(220,38,38,0.4)]"
+                  className="inline-flex min-h-11 items-center gap-2 rounded-lg bg-red-600 px-4 text-sm font-semibold text-white hover:bg-red-500"
                 >
                   <LogIn className="w-4 h-4" />
-                  MASUK DENGAN GOOGLE
+                  Masuk dengan Google
                 </button>
               </div>
             ) : (
@@ -327,10 +307,10 @@ export default function Platform({ initialTab = "landing", adminSection }: { ini
                 <div className="w-12 h-12 bg-red-950/80 border border-red-800 rounded-full flex items-center justify-center mx-auto text-red-500">
                   <Lock className="w-6 h-6" />
                 </div>
-                <h3 className="font-bebas text-4xl text-white tracking-wide">
-                  PROFILE & API KEY TERKUNCI
+                <h3 className="text-2xl font-semibold tracking-tight text-white">
+                  Masuk untuk melihat profil Anda
                 </h3>
-                <p className="text-xs font-mono-code text-zinc-400 max-w-md mx-auto leading-relaxed">
+                <p className="max-w-md mx-auto text-sm leading-relaxed text-zinc-400">
                   Login akun Google untuk melihat profil, kuota harian, serta kunci API produksi milik Anda.
                 </p>
                 <button
@@ -338,10 +318,10 @@ export default function Platform({ initialTab = "landing", adminSection }: { ini
                     setAuthReason("Login Google untuk mengakses profile & kredensial API key Anda.");
                     setAuthModalOpen(true);
                   }}
-                  className="px-6 py-2.5 bg-red-600 hover:bg-red-500 text-black font-bold font-mono-code text-xs rounded uppercase inline-flex items-center gap-2 shadow-[0_0_20px_rgba(220,38,38,0.4)]"
+                  className="inline-flex min-h-11 items-center gap-2 rounded-lg bg-red-600 px-4 text-sm font-semibold text-white hover:bg-red-500"
                 >
                   <LogIn className="w-4 h-4" />
-                  MASUK DENGAN GOOGLE
+                  Masuk dengan Google
                 </button>
               </div>
             ) : (
@@ -366,14 +346,12 @@ export default function Platform({ initialTab = "landing", adminSection }: { ini
       </main>
 
       {/* Global Footer */}
-      <footer className="border-t border-surface-border bg-surface-panel py-8 mt-16 text-xs font-mono-code text-zinc-500">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 flex flex-col sm:flex-row items-center justify-between gap-4">
+      <footer className="mt-8 border-t border-surface-border py-5 text-sm text-zinc-400">
+        <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3 px-4 sm:px-6">
           <div className="flex flex-wrap items-center gap-2">
             <BrandWordmark />
           </div>
-          <div>
-            <span>Dokumentasi dan tester dalam satu panel</span>
-          </div>
+          <button type="button" onClick={() => handleTabSelect("bug-report")} className="min-h-11 rounded-lg px-3 hover:bg-surface-panel hover:text-white">Bantuan & laporan</button>
         </div>
       </footer>
     </>
