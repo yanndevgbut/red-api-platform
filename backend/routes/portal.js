@@ -124,6 +124,17 @@ router.use((_req, res, next) => {
   res.set('Cache-Control', 'private, no-store');
   next();
 });
+const handoff = require('../lib/handoff');
+router.get(['/handoff', '/handoff/guide', '/handoff/credentials'], wrap(async (req, res) => {
+  const owner = await handoff.getOwner();
+  if (!owner || req.portalUser.id !== owner) throw problem(403, 'Halaman ini hanya untuk pemilik proyek.');
+  const document = req.path.split('/')[2];
+  if (!document) return res.json({ documents: handoff.documents });
+  if (!Object.hasOwn(handoff.documents, document)) throw problem(404, 'Dokumen tidak ditemukan.');
+  const filename = handoff.documents[document];
+  const content = await handoff.readDocument(filename);
+  res.json({ filename, content });
+}));
 const bugCategories = new Set(['endpoint', 'website', 'api', 'other']);
 router.post(
   '/bug-reports',

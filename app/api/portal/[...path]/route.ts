@@ -16,6 +16,9 @@ async function proxy(
       ([
         "state",
         "orders",
+        "handoff",
+        "handoff/guide",
+        "handoff/credentials",
         "admin/announcements",
         "admin/orders",
         "admin/bug-reports",
