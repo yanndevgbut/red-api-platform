@@ -83,4 +83,47 @@ router.get('/fbdl', (req, res, next) => {
   mapError: facebook.errorResponse,
 }));
 
+const mediafire = require('../lib/mediafiredl');
+router.get('/mediafiredl', (req, res, next) => {
+  try {
+    req.mediafireKey = mediafire.validate(req.query.url);
+  } catch (error) {
+    const { status, body } = mediafire.errorResponse(error);
+    return res.status(status).json(body);
+  }
+
+  const header = req.get('x-api-key');
+  const queryKey = req.query.apikey;
+  const key = header || queryKey;
+  if (typeof key !== 'string' || !/^[a-z0-9_-]{1,128}$/i.test(key) ||
+      (queryKey !== undefined && (typeof queryKey !== 'string' || (header && header !== queryKey)))) {
+    return res.status(401).json({
+      success: false,
+      error: { code: 'INVALID_KEY', message: 'Gunakan satu API key yang valid melalui header x-api-key.' },
+    });
+  }
+  next();
+}, async (req, res, next) => {
+  // Legacy quota middleware does not check the endpoint registry.
+  if (typeof authentication.authorize === 'function') return next();
+  try {
+    const { data, error } = await require('../config/supabase').from('endpoints')
+      .select('status').eq('path', '/api/download/mediafiredl').maybeSingle();
+    if (res.destroyed || res.writableEnded) return;
+    if (error) throw error;
+    if (!data || data.status === 'deprecated') {
+      return res.status(404).json({ success: false, error: { code: 'ENDPOINT_UNAVAILABLE', message: 'Endpoint belum tersedia.' } });
+    }
+    if (data.status !== 'active') {
+      return res.status(503).json({ success: false, error: { code: 'ENDPOINT_MAINTENANCE', message: 'Endpoint MediaFire sedang maintenance.' } });
+    }
+    next();
+  } catch {
+    if (!res.destroyed) res.status(503).json({ success: false, error: { code: 'ENDPOINT_UNAVAILABLE', message: 'Status endpoint belum dapat diverifikasi.' } });
+  }
+}, require('../middleware/entitlement'), authorize, require('../lib/json-response').createJsonHandler({
+  work: (req, signal) => mediafire.scrape(req.mediafireKey, { signal }),
+  mapError: mediafire.errorResponse,
+}));
+
 module.exports = router;

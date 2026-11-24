@@ -401,3 +401,20 @@ curl --get 'https://api.redapi.my.id/api/download/fbdl' \
   --header 'x-api-key: YOUR_API_KEY' \
   --data-urlencode 'url=https://www.facebook.com/watch/?v=10153231379946729'
 ```
+
+### MediaFire Downloader (mediafiredl)
+
+`GET /api/download/mediafiredl?url=...` menerima URL HTTPS MediaFire atau
+quickkey satu file dengan header `x-api-key`. Respons berisi metadata dan
+`data.urls.direct` jika tautan publik tersedia. Backend tidak mengunduh isi
+file. Folder tidak didukung dan password tidak dilewati. Tautan langsung
+bisa kedaluwarsa.
+
+```sh
+curl --get 'https://api.redapi.my.id/api/download/mediafiredl' \
+  --header 'x-api-key: YOUR_API_KEY' \
+  --data-urlencode 'url=YOUR_QUICKKEY'
+```
+
+Migrasi registry mendaftarkan endpoint sebagai `maintenance`. Uji dengan
+registry `active` di staging sebelum mengubah status produksi menjadi `active`.

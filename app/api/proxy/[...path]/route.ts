@@ -60,9 +60,10 @@ async function proxy(req: NextRequest, { params }: Context) {
       await response.body?.cancel();
       return NextResponse.json({ error: "Respons node tidak valid." }, { status: 502 });
     }
+    const streaming = longConversion || screenshot || instagramDownload || extendedLookup || path === "/api/download/mediafiredl";
     return new NextResponse(response.body, {
       status: response.status,
-      headers: { "Content-Type": "application/json", "Cache-Control": longConversion || screenshot || instagramDownload || extendedLookup ? "no-store, no-transform" : "no-store", ...(longConversion || screenshot || instagramDownload || extendedLookup ? { "X-Accel-Buffering": "no" } : {}) },
+      headers: { "Content-Type": "application/json", "Cache-Control": streaming ? "no-store, no-transform" : "no-store", ...(streaming ? { "X-Accel-Buffering": "no" } : {}) },
     });
   } catch {
     return NextResponse.json({ error: "Node API tidak dapat dijangkau." }, { status: 502 });
