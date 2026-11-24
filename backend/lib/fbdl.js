@@ -47,7 +47,10 @@ function validate(value) {
   return url;
 }
 
-async function page(value, { fetchImpl, signal }) {
+async function page(
+  value,
+  { fetchImpl, signal, resolveMediaRedirect = false },
+) {
   let url = validate(value);
   for (let hop = 0; hop < 6; hop++) {
     signal.throwIfAborted();
@@ -76,10 +79,20 @@ async function page(value, { fetchImpl, signal }) {
           'Facebook mengalihkan ke alamat yang tidak diizinkan.',
         );
       }
+      if (resolveMediaRedirect && identify(url).id) return { url, html: null };
       continue;
     }
     if (!response.ok) {
       await response.body?.cancel();
+      if (
+        resolveMediaRedirect &&
+        response.status === 400 &&
+        /^\/share\//i.test(url.pathname)
+      )
+        throw fail(
+          'SHARE_URL_UNRESOLVED',
+          'Facebook tidak membuka tautan share dari server. Gunakan URL Reel atau video langsung.',
+        );
       if (response.status === 429)
         throw fail(
           'RATE_LIMITED',
@@ -364,14 +377,38 @@ async function scrape(input, { fetchImpl = fetch, signal } = {}) {
   }
   let lastError;
   let previousResult;
+  let detailUrl = localized.href;
   let resolved = original.href;
-  for (const candidate of candidates) {
+  for (let index = 0; index < candidates.length; index++) {
+    const candidate = candidates[index];
     try {
-      const response = await page(candidate, options);
+      const response = await page(candidate, {
+        ...options,
+        resolveMediaRedirect: candidate === localized.href && !identity.id,
+      });
       if (candidate === localized.href) {
         resolved = response.url.href;
         const redirected = identify(response.url);
         if (!identity.id && redirected.id) identity = redirected;
+      }
+      if (response.html === null) {
+        // Share links can reveal an ID in a public redirect even when its tracking URL fails.
+        const canonical = new URL(response.url);
+        for (const key of [...canonical.searchParams.keys()]) {
+          if (key !== 'v' && key !== 'fbid') canonical.searchParams.delete(key);
+        }
+        resolved = detailUrl = canonical.href;
+        const targets = [canonical.href];
+        if (identity.type !== 'photo') {
+          targets.unshift(
+            'https://www.facebook.com/video/embed?video_id=' + identity.id,
+          );
+        } else {
+          // A video plugin cannot resolve a photo.
+          candidates.length = index + 1;
+        }
+        candidates.splice(index + 1, 0, ...targets);
+        continue;
       }
       const parsed = extract(response.html, {
         photoId: identity.type === 'photo' ? identity.id : null,
@@ -409,13 +446,13 @@ async function scrape(input, { fetchImpl = fetch, signal } = {}) {
         continue;
       }
       let details = metadata(response.html, identity.id);
-      if (candidate !== localized.href && identity.id) {
+      if (candidate !== detailUrl && identity.id) {
         try {
           const detailSignal = AbortSignal.any([
             options.signal,
             AbortSignal.timeout(3000),
           ]);
-          const detailPage = await page(localized.href, {
+          const detailPage = await page(detailUrl, {
             fetchImpl,
             signal: detailSignal,
           });
@@ -456,7 +493,14 @@ async function scrape(input, { fetchImpl = fetch, signal } = {}) {
       };
     } catch (error) {
       if (options.signal.aborted) throw options.signal.reason;
-      if (['RATE_LIMITED', 'FACEBOOK_RESTRICTED'].includes(error.code)) throw error;
+      if (
+        [
+          'RATE_LIMITED',
+          'FACEBOOK_RESTRICTED',
+          'SHARE_URL_UNRESOLVED',
+        ].includes(error.code)
+      )
+        throw error;
       lastError = error;
     }
   }
@@ -469,6 +513,10 @@ function errorResponse(error) {
     MEDIA_UNAVAILABLE: [
       404,
       'Media publik tidak ditemukan atau memerlukan login.',
+    ],
+    SHARE_URL_UNRESOLVED: [
+      422,
+      'Facebook tidak membuka tautan share dari server. Gunakan URL Reel atau video langsung.',
     ],
     FACEBOOK_RESTRICTED: [404, 'Media tidak tersedia tanpa login.'],
     RATE_LIMITED: [429, 'Facebook membatasi permintaan. Coba lagi nanti.'],

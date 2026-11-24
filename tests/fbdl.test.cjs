@@ -102,3 +102,45 @@ test('fbdl extracts only the matching public photo and rejects unavailable media
     504,
   );
 });
+
+test('fbdl tries the public embed after a share URL reveals the Reel ID', async () => {
+  const share = 'https://www.facebook.com/share/r/example/';
+  const reel = 'https://www.facebook.com/reel/' + id;
+  const urls = [];
+  const result = await scrape(share, {
+    fetchImpl: async (value) => {
+      urls.push(value);
+      const url = new URL(value);
+      if (url.pathname.startsWith('/share/')) {
+        return new Response(null, {
+          status: 302,
+          headers: { location: reel + '?rdid=tracking' },
+        });
+      }
+      if (url.pathname === '/video/embed') {
+        assert.equal(url.searchParams.get('video_id'), id);
+        return new Response(
+          '<script>' + JSON.stringify({ hd_src: hd }) + '</script>',
+        );
+      }
+      assert.equal(value, reel);
+      return new Response('<html></html>');
+    },
+  });
+  assert.equal(result.type, 'reel');
+  assert.equal(result.resolved_url, reel);
+  assert.equal(result.metadata.id, id);
+  assert.equal(result.media[0].url, hd);
+  assert.equal(urls.length, 3);
+});
+
+test('fbdl reports a rejected share link separately from unavailable media', async () => {
+  await assert.rejects(
+    scrape('https://www.facebook.com/share/r/example/', {
+      fetchImpl: async () => new Response('Error', { status: 400 }),
+    }),
+    (error) =>
+      error.code === 'SHARE_URL_UNRESOLVED' &&
+      errorResponse(error).status === 422,
+  );
+});
