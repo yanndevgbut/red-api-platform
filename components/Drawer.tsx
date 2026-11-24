@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useRef } from "react";
-import { X, ArrowRight, Server, Shield, Database, Lock, LogIn, LogOut } from "lucide-react";
+import { X, ArrowRight, Shield, Lock, LogIn, LogOut } from "lucide-react";
 import { Profile } from "@/types";
 
 interface DrawerProps {
@@ -173,26 +173,6 @@ export default function Drawer({
             </button>}
           </div>
 
-          {/* Quick Info */}
-          <div className="pt-4 border-t border-surface-border space-y-2 text-[11px] text-zinc-400">
-            <div className="text-[10px] uppercase tracking-widest text-zinc-500 font-bold px-1">
-              SYSTEM STATUS
-            </div>
-            <div className="flex items-center justify-between py-1 px-1">
-              <span className="flex items-center gap-1.5">
-                <Server className="w-3.5 h-3.5 text-zinc-500" />
-                Pterodactyl Node:
-              </span>
-              <span className="text-emerald-400 font-bold">Lihat status</span>
-            </div>
-            <div className="flex items-center justify-between py-1 px-1">
-              <span className="flex items-center gap-1.5">
-                <Database className="w-3.5 h-3.5 text-zinc-500" />
-                Supabase Engine:
-              </span>
-              <span className="text-zinc-300">Auth & database</span>
-            </div>
-          </div>
         </div>
 
         {/* Footer */}
