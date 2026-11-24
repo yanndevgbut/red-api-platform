@@ -387,3 +387,17 @@ untuk request langsung maupun sesi browser dari server produksi. Akses endpoint
 menolak request sebelum pemotongan kuota selama status katalog belum `active`,
 termasuk pada node yang masih memakai RPC kuota lama. Setelah akses Countik dari
 server pulih, operator dapat mengaktifkan endpoint melalui registry admin.
+
+### Facebook Downloader (fbdl)
+
+`GET /api/download/fbdl?url=...` menerima tautan HTTPS Facebook atau fb.watch
+dengan header `x-api-key`. Hasilnya berupa JSON berisi tautan media publik
+(video, Reel, atau foto tunggal), pilihan HD/SD jika tersedia, serta metadata
+yang ditemukan pada halaman. Media yang memerlukan login tidak diambil.
+Tautan CDN dapat kedaluwarsa.
+
+```sh
+curl --get 'https://api.redapi.my.id/api/download/fbdl' \
+  --header 'x-api-key: YOUR_API_KEY' \
+  --data-urlencode 'url=https://www.facebook.com/watch/?v=10153231379946729'
+```

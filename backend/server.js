@@ -52,7 +52,7 @@ app.get('/', (req, res) => {
     name: 'RED API Backend Engine',
     version: '2.4.1',
     status: 'running',
-    endpoints_count: 8
+    endpoints_count: 9
   });
 });
 

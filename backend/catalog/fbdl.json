@@ -1,0 +1,10 @@
+{
+  "name": "Facebook Downloader (fbdl)",
+  "category": "Downloader",
+  "method": "GET",
+  "path": "/api/download/fbdl",
+  "description": "Ambil tautan media publik Facebook atau fb.watch, termasuk video, Reel, dan foto tunggal jika tersedia tanpa login. URL CDN dapat kedaluwarsa.",
+  "min_plan": "free",
+  "status": "active",
+  "params": [{ "name": "url", "type": "string", "required": true }]
+}

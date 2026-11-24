@@ -54,4 +54,33 @@ router.get('/igdl',(req,res,next)=>{
   next();
 }, require('../middleware/entitlement'), authorize, require('../lib/json-response').createJsonHandler({work:(req,signal)=>instagram.scrapeInstagram(req.instagramInput.source,{signal}),mapError:instagram.errorResponse}));
 
+const facebook = require('../lib/fbdl');
+const facebookFailure = (res, error) => {
+  const { status, body } = facebook.errorResponse(error);
+  return res.status(status).json(body);
+};
+
+router.get('/fbdl', (req, res, next) => {
+  try {
+    req.facebookUrl = facebook.validate(req.query.url).href;
+  } catch (error) {
+    return facebookFailure(res, error);
+  }
+
+  const header = req.get('x-api-key');
+  const queryKey = req.query.apikey;
+  const key = header || queryKey;
+  if (typeof key !== 'string' || !/^[a-z0-9_-]{1,128}$/i.test(key) ||
+      (queryKey !== undefined && (typeof queryKey !== 'string' || (header && header !== queryKey)))) {
+    return res.status(401).json({
+      success: false,
+      error: { code: 'INVALID_KEY', message: 'Gunakan satu API key yang valid melalui header x-api-key.' },
+    });
+  }
+  next();
+}, require('../middleware/entitlement'), authorize, require('../lib/json-response').createJsonHandler({
+  work: (req, signal) => facebook.scrape(req.facebookUrl, { signal }),
+  mapError: facebook.errorResponse,
+}));
+
 module.exports = router;
