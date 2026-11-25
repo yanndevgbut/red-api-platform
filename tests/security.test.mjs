@@ -70,6 +70,14 @@ test('migrations: registry authorization, account isolation, rotation and signup
   await db.query("UPDATE endpoints SET status='active' WHERE path=$1", [mediafirePath]);
   await db.exec(mediafireMigration);
   assert.equal((await db.query('SELECT status FROM endpoints WHERE path=$1', [mediafirePath])).rows[0].status, 'active', 'reapplying migration preserves rollout status');
+  const pastebinMigration = await readFile(new URL('../supabase/migrations/20261125000000_add_getpastebin_endpoint.sql', import.meta.url), 'utf8');
+  await db.exec(pastebinMigration);
+  const pastebinPath = '/api/tools/getpastebin';
+  assert.deepEqual((await db.query('SELECT name, category, method, path, description, min_plan, status, params FROM endpoints WHERE path=$1', [pastebinPath])).rows,
+    [JSON.parse(await readFile(new URL('../backend/catalog/getpastebin.json', import.meta.url), 'utf8'))]);
+  await db.query("UPDATE endpoints SET status='active' WHERE path=$1", [pastebinPath]);
+  await db.exec(pastebinMigration);
+  assert.equal((await db.query('SELECT status FROM endpoints WHERE path=$1', [pastebinPath])).rows[0].status, 'active', 'reapplying migration preserves rollout status');
   // Reproduce the production legacy policy before applying the permission repair.
   await db.exec(`CREATE OR REPLACE FUNCTION public.is_admin() RETURNS boolean LANGUAGE sql STABLE SECURITY DEFINER SET search_path='' AS $$ SELECT EXISTS (SELECT 1 FROM public.profiles WHERE id=auth.uid() AND role='admin') $$;
     GRANT EXECUTE ON FUNCTION public.deduct_user_quota(text) TO PUBLIC;

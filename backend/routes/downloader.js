@@ -103,25 +103,7 @@ router.get('/mediafiredl', (req, res, next) => {
     });
   }
   next();
-}, async (req, res, next) => {
-  // Legacy quota middleware does not check the endpoint registry.
-  if (typeof authentication.authorize === 'function') return next();
-  try {
-    const { data, error } = await require('../config/supabase').from('endpoints')
-      .select('status').eq('path', '/api/download/mediafiredl').maybeSingle();
-    if (res.destroyed || res.writableEnded) return;
-    if (error) throw error;
-    if (!data || data.status === 'deprecated') {
-      return res.status(404).json({ success: false, error: { code: 'ENDPOINT_UNAVAILABLE', message: 'Endpoint belum tersedia.' } });
-    }
-    if (data.status !== 'active') {
-      return res.status(503).json({ success: false, error: { code: 'ENDPOINT_MAINTENANCE', message: 'Endpoint MediaFire sedang maintenance.' } });
-    }
-    next();
-  } catch {
-    if (!res.destroyed) res.status(503).json({ success: false, error: { code: 'ENDPOINT_UNAVAILABLE', message: 'Status endpoint belum dapat diverifikasi.' } });
-  }
-}, require('../middleware/entitlement'), authorize, require('../lib/json-response').createJsonHandler({
+}, require('../middleware/endpoint-status')('/api/download/mediafiredl', { maintenance: 'Endpoint MediaFire sedang maintenance.' }), require('../middleware/entitlement'), authorize, require('../lib/json-response').createJsonHandler({
   work: (req, signal) => mediafire.scrape(req.mediafireKey, { signal }),
   mapError: mediafire.errorResponse,
 }));
