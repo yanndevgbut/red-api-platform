@@ -19,6 +19,20 @@ router.get('/ff', (req, res, next) => {
     res.status(code).json({ status: false, code, message: { 404: 'Profil Free Fire tidak ditemukan.', 502: 'Provider profil Free Fire belum dapat mengambil data. Silakan coba lagi.', 504: 'Permintaan profil Free Fire melewati batas waktu.' }[code] });
   }
 });
+const robloxstalk = require('../lib/robloxstalk');
+const endpointStatus = require('../middleware/endpoint-status');
+router.get('/robloxstalk', (req, res, next) => {
+  try { req.robloxUsername = robloxstalk.normalizeUsername(req.query.username); }
+  catch (error) { const result = robloxstalk.errorResponse(error); return res.status(result.status).json(result.body); }
+  const key = req.get('x-api-key') || req.query.apikey;
+  if (req.query.apikey !== undefined && (typeof req.query.apikey !== 'string' || (req.get('x-api-key') && req.query.apikey !== req.get('x-api-key')))) return res.status(401).json({success:false,error:{code:'INVALID_KEY',message:'Gunakan satu API key yang valid.'}});
+  if (typeof key !== 'string' || key.length > 128 || !/^[a-z0-9_-]+$/i.test(key)) return res.status(401).json({success:false,error:{code:'INVALID_KEY',message:'API key diperlukan melalui header x-api-key.'}});
+  next();
+}, endpointStatus('/api/stalk/robloxstalk', { maintenance: 'Endpoint Roblox Stalk sedang maintenance.' }), require('../middleware/entitlement'), authorize, require('../lib/json-response').createJsonHandler({
+  work: (req, signal) => robloxstalk.robloxStalk(req.robloxUsername, { signal }),
+  mapError: robloxstalk.errorResponse,
+  heartbeatMs: 16000,
+}));
 const tiktokProfile = require('../lib/stalktt');
 let tiktokProfileActive = false;
 router.get('/stalktt', (req, res, next) => {

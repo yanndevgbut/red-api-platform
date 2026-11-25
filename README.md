@@ -408,6 +408,40 @@ menolak request sebelum pemotongan kuota selama status katalog belum `active`,
 termasuk pada node yang masih memakai RPC kuota lama. Setelah akses Countik dari
 server pulih, operator dapat mengaktifkan endpoint melalui registry admin.
 
+### Roblox Stalk (robloxstalk)
+
+`GET /api/stalk/robloxstalk?username=Roblox` tersedia di kategori **Stalk**, paket
+Free. Kirim header `x-api-key`. Parameter username menerima nama akun Roblox dengan
+atau tanpa `@`, 3–20 karakter huruf, angka, atau underscore. Display name dan URL
+profil ditolak. Nilai salah ditolak sebelum kuota dipotong.
+
+```sh
+curl --get 'https://api.redapi.my.id/api/stalk/robloxstalk' \
+  --header 'x-api-key: YOUR_API_KEY' \
+  --data-urlencode 'username=Roblox'
+```
+
+Respons `success: true` berisi `data` dengan `id`, `username`, `display_name`, `bio`,
+`created_at`, `is_banned`, `verified`, `profile_url`, `friends`, `followers`,
+`following`, `avatar`, `headshot`, `groups`, `group_count`, `experiences`, dan
+`fetched_at`. `avatar`/`headshot` berisi `state` dan `url` (null bila thumbnail belum
+selesai). `groups` hanya memuat grup publik yang terlihat, dan `experiences` memuat
+maksimal 10 pengalaman publik beserta `has_more`.
+
+Origin dibatasi ke `users.roblox.com`, `friends.roblox.com`, `thumbnails.roblox.com`,
+`groups.roblox.com`, dan `games.roblox.com`; redirect ditolak, setiap respons dibatasi
+512 KiB, dan batas waktu total 15 detik tanpa retry. Bila satu subresource gagal,
+respons tetap `200` dengan field tersebut bernilai `null` dan `errors` menjelaskan
+kodenya. Username tidak ditemukan menghasilkan `NOT_FOUND` (404), pembatasan Roblox
+`RATE_LIMITED` (429), penolakan server `ROBLOX_RESTRICTED` (403), waktu habis
+`ROBLOX_TIMEOUT` (504), dan respons rusak `ROBLOX_RESPONSE` (502). Request valid yang
+sudah diterima memakai satu kuota, termasuk saat provider kemudian gagal. Metadata
+katalog tersedia di `backend/catalog/robloxstalk.json`.
+
+Status rollout awal `robloxstalk` adalah **maintenance** sampai uji dari server
+produksi berhasil; endpoint menolak request sebelum kuota dipotong selama status
+belum `active`, termasuk pada node yang masih memakai RPC kuota lama.
+
 ### Facebook Downloader (fbdl)
 
 `GET /api/download/fbdl?url=...` menerima tautan HTTPS Facebook atau fb.watch

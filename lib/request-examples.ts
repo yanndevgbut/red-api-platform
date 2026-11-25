@@ -7,6 +7,7 @@ const API_ORIGIN = "https://api.redapi.my.id";
 
 const samples: Record<string, Record<string, Value>> = {
   "/api/stalk/stalktt": { username: "tiktok" },
+  "/api/stalk/robloxstalk": { username: "Roblox" },
   "/api/download/tiktok": { url: "https://vt.tiktok.com/ZS9ChQ9WD/" },
   "/api/download/fbdl": { url: "https://www.facebook.com/watch/?v=10153231379946729" },
   "/api/download/igdl": { url: "https://www.instagram.com/reel/DfenBL6JaTk/" },

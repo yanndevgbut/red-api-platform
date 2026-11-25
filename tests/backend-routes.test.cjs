@@ -17,7 +17,7 @@ test('retired endpoints remain removed and TikTok requires valid input and authe
   try {
     assert.equal((await fetch(base + '/health')).status, 200);
     assert.equal((await fetch(base + '/api/system/stats')).status, 200);
-    assert.equal((await (await fetch(base + '/')).json()).endpoints_count, 11);
+    assert.equal((await (await fetch(base + '/')).json()).endpoints_count, 12);
     const mediafire = base + '/api/download/mediafiredl';
     assert.equal((await fetch(mediafire, { headers: { 'x-api-key': 'test-key' } })).status, 400);
     assert.equal((await fetch(mediafire + '?url=https://mediafire.com.evil.test/file/abcdef123456789', { headers: { 'x-api-key': 'test-key' } })).status, 400);
@@ -50,6 +50,11 @@ test('retired endpoints remain removed and TikTok requires valid input and authe
     assert.equal((await fetch(base + '/api/stalk/stalktt?username=@tiktok')).status,401);
     assert.equal((await fetch(base + '/api/stalk/stalktt?username=tiktok&username=other')).status,400);
     assert.equal((await fetch(base + '/api/stalk/stalktt?username=https://localhost/')).status,400);
+    assert.equal((await fetch(base + '/api/stalk/robloxstalk')).status, 400);
+    assert.equal((await fetch(base + '/api/stalk/robloxstalk?username=ab')).status, 400);
+    assert.equal((await fetch(base + '/api/stalk/robloxstalk?username=@Roblox')).status, 401);
+    assert.equal((await fetch(base + '/api/stalk/robloxstalk?username=Roblox&username=Other')).status, 400);
+    assert.equal((await fetch(base + '/api/stalk/robloxstalk?username=https://localhost/')).status, 400);
     assert.equal((await fetch(base + '/api/stalk/ff')).status, 400);
     assert.equal((await fetch(base + '/api/stalk/ff?uid=12345678')).status, 401);
     assert.equal((await fetch(base + '/api/stalk/ff?uid=12345678&uid=87654321')).status, 400);

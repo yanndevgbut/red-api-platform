@@ -1,0 +1,10 @@
+{
+  "name": "Roblox Stalk (robloxstalk)",
+  "category": "Stalk",
+  "method": "GET",
+  "path": "/api/stalk/robloxstalk",
+  "description": "Lihat profil publik Roblox: nama tampilan, bio, tanggal dibuat, status verifikasi, jumlah teman/pengikut, avatar, headshot, grup, dan pengalaman publik. Parameter username menerima nama akun Roblox (bukan display name) dengan atau tanpa @.",
+  "min_plan": "free",
+  "status": "maintenance",
+  "params": [{ "name": "username", "type": "string", "required": true }]
+}
