@@ -1,0 +1,10 @@
+{
+  "name": "MediaFire Downloader (mediafiredl)",
+  "category": "Downloader",
+  "method": "GET",
+  "path": "/api/download/mediafiredl",
+  "description": "Ambil metadata dan tautan unduh satu file publik MediaFire dari URL HTTPS atau quickkey. Folder tidak didukung. Tautan unduh dapat kedaluwarsa.",
+  "min_plan": "free",
+  "status": "maintenance",
+  "params": [{ "name": "url", "type": "string", "required": true }]
+}
