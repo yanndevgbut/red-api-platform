@@ -29,6 +29,7 @@ const samples: Record<string, Record<string, Value>> = {
     url: "https://red-api-platform.vercel.app/brand/icon-32.png",
     scale: 4,
   },
+  "/api/tools/getpastebin": { url: "https://pastebin.com/XXXXXXXX" },
 };
 const shellQuote = (value: string) => "'" + value.replace(/'/g, "'\\''") + "'";
 const pythonValue = (value: Value) =>

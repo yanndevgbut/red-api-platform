@@ -169,5 +169,52 @@ router.get(
     }),
   }),
 );
+const pastebin = require('../lib/getpastebin');
+const endpointStatus = require('../middleware/endpoint-status');
+router.get(
+  '/getpastebin',
+  (req, res, next) => {
+    const raw = req.query.url;
+    if (typeof raw !== 'string' || !raw.trim()) {
+      return reject(res, 400, 'INVALID_URL', 'Parameter url wajib diisi.');
+    }
+    if (raw.length > 2048) {
+      return reject(res, 400, 'INVALID_URL', 'Parameter url terlalu panjang.');
+    }
+    try {
+      req.pastebinInput = pastebin.parseInput(raw);
+    } catch (error) {
+      return reject(res, 400, 'INVALID_URL', error.message);
+    }
+    const header = req.get('x-api-key');
+    const queryKey = req.query.apikey;
+    const key = header || queryKey;
+    if (
+      typeof key !== 'string' ||
+      !/^[a-z0-9_-]{1,128}$/i.test(key) ||
+      (queryKey !== undefined &&
+        (typeof queryKey !== 'string' || (header && header !== queryKey)))
+    ) {
+      return reject(
+        res,
+        401,
+        'INVALID_KEY',
+        'Gunakan satu API key yang valid melalui header x-api-key.',
+      );
+    }
+    next();
+  },
+  endpointStatus('/api/tools/getpastebin', {
+    maintenance: 'Endpoint Pastebin sedang maintenance.',
+  }),
+  require('../middleware/entitlement'),
+  authorize,
+  createJsonHandler({
+    work: (req, signal) =>
+      pastebin.getPastebin(req.pastebinInput, { signal }),
+    mapError: pastebin.errorResponse,
+  }),
+);
+
 require('./hd')(router, authorize);
 module.exports = router;

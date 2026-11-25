@@ -1,0 +1,10 @@
+{
+  "name": "Pastebin Get (getpastebin)",
+  "category": "Tools",
+  "method": "GET",
+  "path": "/api/tools/getpastebin",
+  "description": "Ambil isi paste publik Pastebin dari URL HTTPS berisi ID 8 karakter. Isi dibatasi 2 MiB dan hanya teks UTF-8; hash SHA-256 disertakan.",
+  "min_plan": "free",
+  "status": "maintenance",
+  "params": [{ "name": "url", "type": "string", "required": true }]
+}

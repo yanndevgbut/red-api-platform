@@ -17,13 +17,19 @@ test('retired endpoints remain removed and TikTok requires valid input and authe
   try {
     assert.equal((await fetch(base + '/health')).status, 200);
     assert.equal((await fetch(base + '/api/system/stats')).status, 200);
-    assert.equal((await (await fetch(base + '/')).json()).endpoints_count, 10);
+    assert.equal((await (await fetch(base + '/')).json()).endpoints_count, 11);
     const mediafire = base + '/api/download/mediafiredl';
     assert.equal((await fetch(mediafire, { headers: { 'x-api-key': 'test-key' } })).status, 400);
     assert.equal((await fetch(mediafire + '?url=https://mediafire.com.evil.test/file/abcdef123456789', { headers: { 'x-api-key': 'test-key' } })).status, 400);
     assert.equal((await fetch(mediafire + '?url=https://mediafire.com/folder/abcdef123456789', { headers: { 'x-api-key': 'test-key' } })).status, 422);
     assert.equal((await fetch(mediafire + '?url=abcdef123456789&url=abcdef123456789')).status, 400);
     assert.equal((await fetch(mediafire + '?url=abcdef123456789')).status, 401);
+    const pastebin = base + '/api/tools/getpastebin';
+    assert.equal((await fetch(pastebin, { headers: { 'x-api-key': 'test-key' } })).status, 400);
+    assert.equal((await fetch(pastebin + '?url=https://pastebin.com.evil.test/abcdef12', { headers: { 'x-api-key': 'test-key' } })).status, 400);
+    assert.equal((await fetch(pastebin + '?url=abcdef12', { headers: { 'x-api-key': 'test-key' } })).status, 400);
+    assert.equal((await fetch(pastebin + '?url=https://pastebin.com/abcdef12')).status, 401);
+    assert.equal((await fetch(pastebin + '?url=https://pastebin.com/abcdef12&url=https://pastebin.com/abcdef34')).status, 400);
     assert.equal((await fetch(base + '/api/download/tiktok')).status, 400);
     assert.equal((await fetch(base + '/api/download/tiktok?url=https://example.com')).status, 400);
     assert.equal((await fetch(base + '/api/download/tiktok?url=https://vt.tiktok.com/test')).status, 401);

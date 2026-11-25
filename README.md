@@ -305,6 +305,26 @@ igdl menunggu maksimal 125 detik, tester 135 detik. Provider rate limit menghasi
 
 Metadata katalog untuk instalasi baru tersedia di `backend/catalog/igdl.json`.
 
+### Pastebin Get (getpastebin)
+
+`GET /api/tools/getpastebin?url=...` tersedia di kategori **Tools**, paket Free.
+Kirim header `x-api-key`. `url` harus URL HTTPS `pastebin.com` atau
+`www.pastebin.com` dengan ID 8 karakter, misalnya
+`https://pastebin.com/AbCd1234` atau bentuk `/raw/`. ID telanjang ditolak.
+Respons berisi `content`, `bytes`, `sha256`, dan `content_type`. Isi dibatasi
+2 MiB dan hanya teks UTF-8; biner atau HTML ditolak `422`. Redirect hanya
+diikuti selama tetap di host Pastebin.
+
+```sh
+curl --get 'https://api.redapi.my.id/api/tools/getpastebin' \
+  -H 'x-api-key: YOUR_KEY' \
+  --data-urlencode 'url=https://pastebin.com/AbCd1234'
+```
+
+Pastebin berada di belakang Cloudflare. Jika node produksi menerima
+`cf-mitigated: challenge`, endpoint mengembalikan `429 blocked` tanpa memotong
+kuota dan status katalog tetap `maintenance`.
+
 ### Image HD (hd)
 
 `GET /api/tools/hd?url=...&scale=4` tersedia di kategori **Tools**, paket Free.
